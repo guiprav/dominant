@@ -3,7 +3,11 @@
   "version": "0.0.0",
   "author": "Gui Prá (super.driver.512@gmail.com)",
   "license": "AGPL-3.0+",
+  "scripts": {
+    "build": "browserify demo.js -o demo.bundle.js"
+  },
   "devDependencies": {
-    "browserify": "^16.3.0"
+    "browserify": "^16.3.0",
+    "hyperscript": "^2.0.2"
   }
 }
