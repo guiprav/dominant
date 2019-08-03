@@ -1,4 +1,4 @@
-exports.arrayDiff = (a, b) => {
+exports._arrayDiff = (a, b) => {
   let diffs = {
     moved: [],
     added: [],
@@ -208,10 +208,10 @@ exports.update = (el, { bindingType } = {}) => {
 };
 
 exports.update.array = (el, binding) => {
-  let newValues = binding.get();
+  let newValues = [...binding.get()];
   let { lastValues } = binding;
 
-  let diffs = exports.arrayDiff(lastValues || [], newValues);
+  let diffs = exports._arrayDiff(lastValues || [], newValues);
 
   if (!diffs) {
     return;
@@ -256,6 +256,7 @@ exports.update.array = (el, binding) => {
   }
 
   binding.lastEls = updatedEls;
+  binding.lastValues = newValues;
 };
 
 exports.update.class = (el, binding) => {

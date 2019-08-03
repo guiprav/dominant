@@ -1,6 +1,15 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 window.dom = require('.');
 
+window.shuffle = xs => {
+  for (let i = xs.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+
+  return xs;
+};
+
 let TodoApp = () => {
   let app = dom.el('div', { class: 'todoApp' }, [
     dom.el('h1', document.title),
@@ -24,6 +33,8 @@ let TodoApp = () => {
           dom.el('span', { class: 'todoListItem-label' }),
         ]),
       ]),
+
+      dom.el('button', { class: 'todoApp-listShuffleBtn' }, 'Shuffle'),
     ]),
   ]);
 
@@ -87,9 +98,17 @@ let TodoApp = () => {
   }
 
   dom.bindArray(app.querySelector('.todoListItem'), {
-    get: () => app.state.todos,
+    get: () => app.state[
+      app.state.activeTab === 'all'
+        ? 'todos'
+        : app.state.activeTab
+    ],
 
     forEach: (listItem, todo) => {
+      dom.bindClass(listItem, () => ({
+        'todoListItem-mDone': todo.isDone,
+      }));
+
       let toggle = listItem.querySelector('.todoListItem-toggle');
 
       dom.bindTextContent(toggle, () => todo.isDone ? 'Undo' : 'Done');
@@ -131,6 +150,11 @@ let TodoApp = () => {
     },
   });
 
+  app.querySelector('.todoApp-listShuffleBtn').addEventListener('click', () => {
+    shuffle(app.state.todos);
+    dom.update();
+  });
+
   return app;
 };
 
@@ -139,7 +163,7 @@ addEventListener('DOMContentLoaded', () => {
 });
 
 },{".":2}],2:[function(require,module,exports){
-exports.arrayDiff = (a, b) => {
+exports._arrayDiff = (a, b) => {
   let diffs = {
     moved: [],
     added: [],
@@ -349,10 +373,10 @@ exports.update = (el, { bindingType } = {}) => {
 };
 
 exports.update.array = (el, binding) => {
-  let newValues = binding.get();
+  let newValues = [...binding.get()];
   let { lastValues } = binding;
 
-  let diffs = exports.arrayDiff(lastValues || [], newValues);
+  let diffs = exports._arrayDiff(lastValues || [], newValues);
 
   if (!diffs) {
     return;
@@ -397,6 +421,7 @@ exports.update.array = (el, binding) => {
   }
 
   binding.lastEls = updatedEls;
+  binding.lastValues = newValues;
 };
 
 exports.update.class = (el, binding) => {

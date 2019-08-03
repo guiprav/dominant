@@ -1,5 +1,14 @@
 window.dom = require('.');
 
+window.shuffle = xs => {
+  for (let i = xs.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+
+  return xs;
+};
+
 let TodoApp = () => {
   let app = dom.el('div', { class: 'todoApp' }, [
     dom.el('h1', document.title),
@@ -23,6 +32,8 @@ let TodoApp = () => {
           dom.el('span', { class: 'todoListItem-label' }),
         ]),
       ]),
+
+      dom.el('button', { class: 'todoApp-listShuffleBtn' }, 'Shuffle'),
     ]),
   ]);
 
@@ -86,9 +97,17 @@ let TodoApp = () => {
   }
 
   dom.bindArray(app.querySelector('.todoListItem'), {
-    get: () => app.state.todos,
+    get: () => app.state[
+      app.state.activeTab === 'all'
+        ? 'todos'
+        : app.state.activeTab
+    ],
 
     forEach: (listItem, todo) => {
+      dom.bindClass(listItem, () => ({
+        'todoListItem-mDone': todo.isDone,
+      }));
+
       let toggle = listItem.querySelector('.todoListItem-toggle');
 
       dom.bindTextContent(toggle, () => todo.isDone ? 'Undo' : 'Done');
@@ -128,6 +147,11 @@ let TodoApp = () => {
       dom.bindPresence(label, () => !todo.isEditing);
       dom.bindTextContent(label, () => todo.label);
     },
+  });
+
+  app.querySelector('.todoApp-listShuffleBtn').addEventListener('click', () => {
+    shuffle(app.state.todos);
+    dom.update();
   });
 
   return app;
