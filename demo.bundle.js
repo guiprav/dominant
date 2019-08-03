@@ -56,6 +56,14 @@ let TodoApp = () => {
     get done() {
       return this.todos.filter(x => x.isDone);
     },
+
+    get tabTodos() {
+      switch (this.activeTab) {
+        case 'all': return this.todos;
+        case 'pending': return this.pending;
+        case 'done': return this.done;
+      }
+    }
   };
 
   let newItemInput = app.querySelector('.todoApp-newItemInput');
@@ -99,11 +107,7 @@ let TodoApp = () => {
   }
 
   dom.bindArray(app.querySelector('.todoListItem'), {
-    get: () => app.state[
-      app.state.activeTab === 'all'
-        ? 'todos'
-        : app.state.activeTab
-    ],
+    get: () => app.state.tabTodos,
 
     forEach: (listItem, todo) => {
       dom.bindClass(listItem, () => ({
