@@ -33,6 +33,7 @@ let TodoApp = () => {
         ]),
       ]),
 
+      dom.el('button', { class: 'todoApp-listClearBtn' }, 'Clear'),
       dom.el('button', { class: 'todoApp-listShuffleBtn' }, 'Shuffle'),
     ]),
   ]);
@@ -147,6 +148,11 @@ let TodoApp = () => {
       dom.bindPresence(label, () => !todo.isEditing);
       dom.bindTextContent(label, () => todo.label);
     },
+  });
+
+  app.querySelector('.todoApp-listClearBtn').addEventListener('click', () => {
+    app.state.todos = [];
+    dom.update();
   });
 
   app.querySelector('.todoApp-listShuffleBtn').addEventListener('click', () => {
