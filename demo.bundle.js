@@ -64,9 +64,9 @@ let TodoApp = () => {
     set: x => app.state.newItemLabel = x,
   });
 
-  newItemInput.addEventListener('keydown', ev => {
+  newItemInput.addEventListener('keyup', ev => {
     if (ev.key === 'Enter') {
-      app.state.todos.push({
+      app.state.todos.unshift({
         label: app.state.newItemLabel,
         isDOne: false,
       });
@@ -127,7 +127,7 @@ let TodoApp = () => {
         set: x => todo.label = x,
       });
 
-      input.addEventListener('keydown', ev => {
+      input.addEventListener('keyup', ev => {
         if (ev.key === 'Enter') {
           todo.isEditing = false;
           dom.update();
@@ -312,7 +312,13 @@ exports.bindValue = (el, { get, set }) => {
   exports.update(el, { bindingType: 'value' });
 
   if (set) {
-    binding.keyupHandler = ev => set(ev.target.value);
+    binding.keyupHandler = ev => {
+      let x = ev.target.value;
+
+      set(x);
+      binding.lastValue = x;
+    };
+
     el.addEventListener('keyup', binding.keyupHandler);
   }
 
@@ -413,6 +419,8 @@ exports.update.array = (el, binding) => {
         let el = lastEls[diff.from];
 
         parentEl.insertBefore(el, cursor.nextSibling);
+        cursor = el;
+
         updatedEls.push(el);
 
         break;
@@ -433,7 +441,7 @@ exports.update.class = (el, binding) => {
 
     for (let [k, v] of Object.entries(ret)) {
       if (!Object.keys(newValues).includes(k)) {
-        newValues[k] = v;
+        newValues[k] = Boolean(v);
       }
     }
   }

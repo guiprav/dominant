@@ -147,7 +147,13 @@ exports.bindValue = (el, { get, set }) => {
   exports.update(el, { bindingType: 'value' });
 
   if (set) {
-    binding.keyupHandler = ev => set(ev.target.value);
+    binding.keyupHandler = ev => {
+      let x = ev.target.value;
+
+      set(x);
+      binding.lastValue = x;
+    };
+
     el.addEventListener('keyup', binding.keyupHandler);
   }
 
@@ -248,6 +254,8 @@ exports.update.array = (el, binding) => {
         let el = lastEls[diff.from];
 
         parentEl.insertBefore(el, cursor.nextSibling);
+        cursor = el;
+
         updatedEls.push(el);
 
         break;
@@ -268,7 +276,7 @@ exports.update.class = (el, binding) => {
 
     for (let [k, v] of Object.entries(ret)) {
       if (!Object.keys(newValues).includes(k)) {
-        newValues[k] = v;
+        newValues[k] = Boolean(v);
       }
     }
   }

@@ -63,9 +63,9 @@ let TodoApp = () => {
     set: x => app.state.newItemLabel = x,
   });
 
-  newItemInput.addEventListener('keydown', ev => {
+  newItemInput.addEventListener('keyup', ev => {
     if (ev.key === 'Enter') {
-      app.state.todos.push({
+      app.state.todos.unshift({
         label: app.state.newItemLabel,
         isDOne: false,
       });
@@ -126,7 +126,7 @@ let TodoApp = () => {
         set: x => todo.label = x,
       });
 
-      input.addEventListener('keydown', ev => {
+      input.addEventListener('keyup', ev => {
         if (ev.key === 'Enter') {
           todo.isEditing = false;
           dom.update();
