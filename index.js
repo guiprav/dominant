@@ -154,6 +154,38 @@ exports.bindValue = (el, { get, set }) => {
   return el;
 };
 
+exports.el = (...args) => {
+  let tagName = 'div';
+  let props;
+
+  if (typeof args[0] === 'string') {
+    tagName = args.shift();
+  }
+
+  if (args[0] && args[0].constructor === Object) {
+    props = args.shift();
+  }
+
+  let el = document.createElement(tagName);
+
+  for (let [k, v] of Object.entries(props || {})) {
+    if (k === 'class') {
+      k = 'className';
+    }
+
+    if (k.startsWith('aria-') || k.startsWith('data-')) {
+      el.setAttribute(k, v);
+      continue;
+    }
+
+    el[k] = v;
+  }
+
+  el.append(...args.flat(10));
+
+  return el;
+};
+
 exports.update = (el, { bindingType } = {}) => {
   if (!el) {
     for (let el of exports.boundElements) {
@@ -189,7 +221,6 @@ exports.update.array = (el, binding) => {
   if (!diffs) {
     return;
   }
-  console.log(diffs);
 
   const { lastEls } = binding;
 

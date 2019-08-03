@@ -1,26 +1,26 @@
 window.dom = require('.');
-window.h = require('hyperscript');
 
 let TodoApp = () => {
-  let app = h('.todoApp', [
-    h('.todoApp-heading', 'Dominance To-Do Demo'),
+  let app = dom.el('div', { class: 'todoApp' }, [
+    dom.el('h1', document.title),
 
-    h('.todoApp-contentBox', [
-      h('input.todoApp-newItemInput', {
+    dom.el('div', { class: 'todoApp-contentBox' }, [
+      dom.el('input', {
+        class: 'todoApp-newItemInput',
         placeholder: 'What next?',
       }),
 
-      h('.todoApp-tabs', [
+      dom.el('div', { class: 'todoApp-tabs' }, [
         ['all', 'pending', 'done'].map(
-          x => h('.todoApp-tab', { key: x }),
+          x => dom.el('div', { class: 'todoApp-tab', key: x }),
         ),
       ]),
 
-      h('.todoApp-todoList', [
-        h('.todoListItem', [
-          h('button.todoListItem-toggle'),
-          h('input.todoListItem-input'),
-          h('span.todoListItem-label'),
+      dom.el('div', { class: 'todoApp-todoList' }, [
+        dom.el('div', { class: 'todoListItem' }, [
+          dom.el('button', { class: 'todoListItem-toggle' }),
+          dom.el('input', { class: 'todoListItem-input' }),
+          dom.el('span', { class: 'todoListItem-label' }),
         ]),
       ]),
     ]),
