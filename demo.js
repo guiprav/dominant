@@ -35,15 +35,43 @@ let TodoApp = () => {
       { label: 'Implement Dominance', isDone: false },
       { label: 'Add to the fatigue', isDone: false },
     ],
+
+    get pending() {
+      return this.todos.filter(x => !x.isDone);
+    },
+
+    get done() {
+      return this.todos.filter(x => x.isDone);
+    },
   };
 
-  dom.bindValue(app.querySelector('.todoApp-newItemInput'), {
+  let newItemInput = app.querySelector('.todoApp-newItemInput');
+
+  dom.bindValue(newItemInput, {
     get: () => app.state.newItemLabel,
     set: x => app.state.newItemLabel = x,
   });
 
+  newItemInput.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      app.state.todos.push({
+        label: app.state.newItemLabel,
+        isDOne: false,
+      });
+
+      app.state.newItemLabel = '';
+
+      dom.update();
+    }
+  });
+
   for (let tab of app.querySelectorAll('.todoApp-tab')) {
     let { key } = tab;
+
+    let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
+    let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
+
+    dom.bindTextContent(tab, () => `${label} (${app.state[arrayKey].length})`);
 
     dom.bindClass(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
@@ -65,16 +93,32 @@ let TodoApp = () => {
 
       let input = listItem.querySelector('.todoListItem-input');
 
-      //dom.bindPresence(input, () => todo.isEditing);
+      dom.bindPresence(input, () => todo.isEditing);
 
       dom.bindValue(input, {
         get: () => todo.label,
         set: x => todo.label = x,
       });
 
+      input.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') {
+          todo.isEditing = false;
+          dom.update();
+        }
+      });
+
       let label = listItem.querySelector('.todoListItem-label');
 
-      //dom.bindPresence(label, () => todo.isEditing);
+      label.addEventListener('click', () => {
+        for (let todo of app.state.todos) {
+          todo.isEditing = false;
+        }
+
+        todo.isEditing = true;
+        dom.update();
+      });
+
+      dom.bindPresence(label, () => !todo.isEditing);
       dom.bindTextContent(label, () => todo.label);
     },
   });

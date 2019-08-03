@@ -36,15 +36,43 @@ let TodoApp = () => {
       { label: 'Implement Dominance', isDone: false },
       { label: 'Add to the fatigue', isDone: false },
     ],
+
+    get pending() {
+      return this.todos.filter(x => !x.isDone);
+    },
+
+    get done() {
+      return this.todos.filter(x => x.isDone);
+    },
   };
 
-  dom.bindValue(app.querySelector('.todoApp-newItemInput'), {
+  let newItemInput = app.querySelector('.todoApp-newItemInput');
+
+  dom.bindValue(newItemInput, {
     get: () => app.state.newItemLabel,
     set: x => app.state.newItemLabel = x,
   });
 
+  newItemInput.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      app.state.todos.push({
+        label: app.state.newItemLabel,
+        isDOne: false,
+      });
+
+      app.state.newItemLabel = '';
+
+      dom.update();
+    }
+  });
+
   for (let tab of app.querySelectorAll('.todoApp-tab')) {
     let { key } = tab;
+
+    let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
+    let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
+
+    dom.bindTextContent(tab, () => `${label} (${app.state[arrayKey].length})`);
 
     dom.bindClass(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
@@ -66,16 +94,32 @@ let TodoApp = () => {
 
       let input = listItem.querySelector('.todoListItem-input');
 
-      //dom.bindPresence(input, () => todo.isEditing);
+      dom.bindPresence(input, () => todo.isEditing);
 
       dom.bindValue(input, {
         get: () => todo.label,
         set: x => todo.label = x,
       });
 
+      input.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') {
+          todo.isEditing = false;
+          dom.update();
+        }
+      });
+
       let label = listItem.querySelector('.todoListItem-label');
 
-      //dom.bindPresence(label, () => todo.isEditing);
+      label.addEventListener('click', () => {
+        for (let todo of app.state.todos) {
+          todo.isEditing = false;
+        }
+
+        todo.isEditing = true;
+        dom.update();
+      });
+
+      dom.bindPresence(label, () => !todo.isEditing);
       dom.bindTextContent(label, () => todo.label);
     },
   });
@@ -192,6 +236,22 @@ exports.bindClass = (el, fn) => {
 
   exports.boundElements.add(el);
   exports.update(el, { bindingType: 'class' });
+
+  return el;
+};
+
+exports.bindPresence = (el, fn) => {
+	let bindings = el.bindings = el.bindings || {};
+
+  let anchorComment = document.createComment(' domPresenceBindingAnchor ');
+  let binding = bindings.presence = { anchorComment, el, fn };
+
+  anchorComment.binding = binding;
+
+  el.parentElement.insertBefore(binding.anchorComment, el);
+
+  exports.boundElements.add(el);
+  exports.update(el, { bindingType: 'presence' });
 
   return el;
 };
@@ -326,12 +386,31 @@ exports.update.class = (el, binding) => {
   ])) {
     let v = newValues[k];
 
-    if (v !== lastValues[k]) {
+    if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
       el.classList.toggle(k, v);
     }
   }
 
   binding.lastValues = newValues;
+};
+
+exports.update.presence = (el, binding) => {
+  let newValue = binding.fn();
+  let { anchorComment, lastValue } = binding;
+
+  if (!Object.keys(binding).includes('lastValue') || newValue !== lastValue) {
+    if (newValue) {
+      if (!el.parentElement) {
+        anchorComment.parentElement.insertBefore(
+          el, anchorComment.nextSibling,
+        );
+      }
+    } else {
+      el.remove();
+    }
+  }
+
+  binding.lastValue = newValue;
 };
 
 exports.update.textContent = (el, binding) => {

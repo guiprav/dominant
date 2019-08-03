@@ -106,6 +106,22 @@ exports.bindClass = (el, fn) => {
   return el;
 };
 
+exports.bindPresence = (el, fn) => {
+	let bindings = el.bindings = el.bindings || {};
+
+  let anchorComment = document.createComment(' domPresenceBindingAnchor ');
+  let binding = bindings.presence = { anchorComment, el, fn };
+
+  anchorComment.binding = binding;
+
+  el.parentElement.insertBefore(binding.anchorComment, el);
+
+  exports.boundElements.add(el);
+  exports.update(el, { bindingType: 'presence' });
+
+  return el;
+};
+
 exports.bindTextContent = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.textContent = { fn };
@@ -236,12 +252,31 @@ exports.update.class = (el, binding) => {
   ])) {
     let v = newValues[k];
 
-    if (v !== lastValues[k]) {
+    if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
       el.classList.toggle(k, v);
     }
   }
 
   binding.lastValues = newValues;
+};
+
+exports.update.presence = (el, binding) => {
+  let newValue = binding.fn();
+  let { anchorComment, lastValue } = binding;
+
+  if (!Object.keys(binding).includes('lastValue') || newValue !== lastValue) {
+    if (newValue) {
+      if (!el.parentElement) {
+        anchorComment.parentElement.insertBefore(
+          el, anchorComment.nextSibling,
+        );
+      }
+    } else {
+      el.remove();
+    }
+  }
+
+  binding.lastValue = newValue;
 };
 
 exports.update.textContent = (el, binding) => {
