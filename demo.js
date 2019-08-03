@@ -12,7 +12,7 @@ let TodoApp = () => {
 
       dom.el('div', { class: 'todoApp-tabs' }, [
         ['all', 'pending', 'done'].map(
-          x => dom.el('div', { class: 'todoApp-tab', key: x }),
+          x => dom.el('a', { class: 'todoApp-tab', key: x, href: '#' }),
         ),
       ]),
 
@@ -76,6 +76,13 @@ let TodoApp = () => {
     dom.bindClass(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
     }));
+
+    tab.addEventListener('click', ev => {
+      ev.preventDefault();
+
+      app.state.activeTab = key;
+      dom.update();
+    });
   }
 
   dom.bindArray(app.querySelector('.todoListItem'), {

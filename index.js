@@ -154,13 +154,8 @@ exports.bindValue = (el, { get, set }) => {
   return el;
 };
 
-exports.el = (...args) => {
-  let tagName = 'div';
+exports.el = (tagName, ...args) => {
   let props;
-
-  if (typeof args[0] === 'string') {
-    tagName = args.shift();
-  }
 
   if (args[0] && args[0].constructor === Object) {
     props = args.shift();
