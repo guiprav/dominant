@@ -89,6 +89,10 @@ exports.bindArray = (el, { get, forEach }) => {
   el.anchorComment = anchorComment;
   el.remove();
 
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
   exports.update(el, { bindingType: 'array' });
 
   return el;
@@ -104,7 +108,28 @@ exports.bindClass = (el, fn) => {
 
   binding.fns.unshift(fn);
 
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
   exports.update(el, { bindingType: 'class' });
+
+  return el;
+};
+
+exports.bindListener = (el, type, fn) => {
+	let bindings = el.bindings = el.bindings || {};
+
+  let binding = bindings.listeners = bindings.listeners || {
+    attach: [],
+    detach: [],
+  };
+
+  binding[type].push(fn);
+
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
 
   return el;
 };
@@ -121,6 +146,10 @@ exports.bindPresence = (el, fn) => {
   anchorComment.binding = binding;
   el.anchorComment = anchorComment;
 
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
   exports.update(el, { bindingType: 'presence' });
 
   return el;
@@ -129,6 +158,10 @@ exports.bindPresence = (el, fn) => {
 exports.bindTextContent = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.textContent = { fn };
+
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
 
   exports.update(el, { bindingType: 'textContent' });
 
@@ -146,8 +179,6 @@ exports.bindValue = (el, { get, set }) => {
   binding.get = get || binding.get;
   binding.set = set || binding.set;
 
-  exports.update(el, { bindingType: 'value' });
-
   if (set) {
     binding.keyupHandler = ev => {
       let x = ev.target.value;
@@ -159,7 +190,34 @@ exports.bindValue = (el, { get, set }) => {
     el.addEventListener('keyup', binding.keyupHandler);
   }
 
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
+  exports.update(el, { bindingType: 'value' });
+
   return el;
+};
+
+exports.contains = (el, node) => {
+  if (el.contains(node)) {
+    return true;
+  }
+
+  let anchorCommentAncestors = [];
+  let cursor = node;
+
+  while (cursor) {
+    let { anchorComment } = cursor;
+
+    if (anchorComment) {
+      anchorCommentAncestors.push(anchorComment);
+    }
+
+    cursor = cursor.parentNode;
+  }
+
+  return anchorCommentAncestors.some(x => el.contains(x));
 };
 
 exports.el = (tagName, ...args) => {
@@ -189,27 +247,6 @@ exports.el = (tagName, ...args) => {
   return el;
 };
 
-exports.contains = (el, node) => {
-  if (el.contains(node)) {
-    return true;
-  }
-
-  let anchorCommentAncestors = [];
-  let cursor = node;
-
-  while (cursor) {
-    let { anchorComment } = cursor;
-
-    if (anchorComment) {
-      anchorCommentAncestors.push(anchorComment);
-    }
-
-    cursor = cursor.parentNode;
-  }
-
-  return anchorCommentAncestors.some(x => el.contains(x));
-};
-
 exports.mutationObserver = new MutationObserver(muts => {
   let { body } = document;
   let { boundElements } = exports;
@@ -224,20 +261,42 @@ exports.mutationObserver = new MutationObserver(muts => {
     for (let el of boundElements) {
       if (!exports.contains(body, el)) {
         boundElements.delete(el);
+
+        let { listeners } = el.bindings;
+
+        if (listeners && listeners.detach) {
+          for (let fn of listeners.detach) {
+            fn(el);
+          }
+        }
       }
     }
   }
 
   let attachedAnchorComments = new Set();
 
+  let attachBoundElement = el => {
+    if (!boundElements.has(el)) {
+      boundElements.add(el);
+
+      let { listeners } = el.bindings;
+
+      if (listeners && listeners.attach) {
+        for (let fn of listeners.attach) {
+          fn(el);
+        }
+      }
+    }
+  };
+
   let findRelevantNodes = root => {
     if (root.bindings) {
-      boundElements.add(root);
+      attachBoundElement(root);
     }
 
     for (let el of root.querySelectorAll('*')) {
       if (el.bindings) {
-        boundElements.add(el);
+        attachBoundElement(el);
       }
 
       let { previousSibling, nextSibling } = el;
@@ -279,6 +338,45 @@ addEventListener('DOMContentLoaded', () => {
     subtree: true,
   });
 });
+
+exports.removeListener = (el, type, fn) => {
+	let { bindings } = el;
+
+  if (!bindings) {
+    return el;
+  }
+
+  let binding = bindings.listeners;
+
+  if (!binding) {
+    return el;
+  }
+
+  let listenerFns = binding[type];
+
+  if (!listenerFns) {
+    return el;
+  }
+
+  let fnIndex = listenerFns.indexOf(fn);
+
+  if (fnIndex === -1) {
+    return el;
+  }
+
+  listenerFns.splice(fnIndex, 1);
+
+  if (!binding.attach.length && !binding.detach.length) {
+    delete bindings.listeners;
+  }
+
+  if (!Object.keys(bindings).length) {
+    delete el.bindings;
+    exports.boundElements.delete(el);
+  }
+
+  return el;
+};
 
 exports.update = (el, { bindingType } = {}) => {
   if (!el) {
@@ -391,6 +489,8 @@ exports.update.class = (el, binding) => {
 
   binding.lastValues = newValues;
 };
+
+exports.update.listeners = () => null;
 
 exports.update.presence = (el, binding) => {
   let newValue = binding.fn();
