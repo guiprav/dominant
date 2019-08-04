@@ -405,59 +405,45 @@ exports.mutationObserver = new MutationObserver(muts => {
 
   let attachedAnchorComments = new Set();
 
+  let findRelevantNodes = root => {
+    if (root.bindings) {
+      boundElements.add(root);
+    }
+
+    for (let el of root.querySelectorAll('*')) {
+      if (el.bindings) {
+        boundElements.add(el);
+      }
+
+      let { previousSibling, nextSibling } = el;
+
+      if (previousSibling && previousSibling.anchoredElements) {
+        attachedAnchorComments.add(previousSibling);
+      }
+
+      if (nextSibling && nextSibling.anchoredElements) {
+        attachedAnchorComments.add(nextSibling);
+      }
+    }
+  };
+
   for (let node of attachedNodes) {
     if (node.anchoredElements) {
       attachedAnchorComments.add(node);
     }
     else
     if (node.querySelectorAll) {
-      if (node.bindings) {
-        boundElements.add(node);
-      }
-
-      for (let el of node.querySelectorAll('*')) {
-        if (el.bindings) {
-          boundElements.add(el);
-        }
-
-        let { previousSibling, nextSibling } = el;
-
-        if (previousSibling && previousSibling.anchoredElements) {
-          attachedAnchorComments.add(previousSibling);
-        }
-
-        if (nextSibling && nextSibling.anchoredElements) {
-          attachedAnchorComments.add(nextSibling);
-        }
-      }
+      findRelevantNodes(node);
     }
+  }
 
-    while (attachedAnchorComments.size) {
-      for (let anchorComment of attachedAnchorComments) {
-        for (let anchoredEl of anchorComment.anchoredElements) {
-          if (anchoredEl.bindings) {
-            boundElements.add(anchoredEl);
-          }
-
-          for (let el of anchoredEl.querySelectorAll('*')) {
-            if (el.bindings) {
-              boundElements.add(el);
-            }
-
-            let { previousSibling, nextSibling } = el;
-
-            if (previousSibling && previousSibling.anchoredElements) {
-              attachedAnchorComments.add(previousSibling);
-            }
-
-            if (nextSibling && nextSibling.anchoredElements) {
-              attachedAnchorComments.add(nextSibling);
-            }
-          }
-        }
-
-        attachedAnchorComments.delete(anchorComment);
+  while (attachedAnchorComments.size) {
+    for (let anchorComment of attachedAnchorComments) {
+      for (let el of anchorComment.anchoredElements) {
+        findRelevantNodes(el);
       }
+
+      attachedAnchorComments.delete(anchorComment);
     }
   }
 });
