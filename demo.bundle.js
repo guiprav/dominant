@@ -277,6 +277,25 @@ exports.bindArray = (el, { get, forEach }) => {
   return el;
 };
 
+exports.bindAttrs = (el, fn) => {
+	let bindings = el.bindings = el.bindings || {};
+
+  let binding = bindings.attrs = bindings.attrs || {
+    fns: [],
+    lastValues: {},
+  };
+
+  binding.fns.unshift(fn);
+
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
+  exports.update(el, { bindingType: 'attrs' });
+
+  return el;
+};
+
 exports.bindClass = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
@@ -644,6 +663,39 @@ exports.update.array = (el, binding) => {
   }
 
   binding.lastEls = updatedEls;
+  binding.lastValues = newValues;
+};
+
+exports.update.attrs = (el, binding) => {
+  let newValues = {};
+  let { lastValues } = binding;
+
+  for (let fn of binding.fns) {
+    let ret = fn();
+
+    for (let [k, v] of Object.entries(ret)) {
+      if (!Object.keys(newValues).includes(k)) {
+        newValues[k] = v;
+      }
+    }
+  }
+
+  for (let k of new Set([
+    ...Object.keys(newValues),
+    ...Object.keys(lastValues),
+  ])) {
+    let v = newValues[k];
+
+    if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
+      if (v !== undefined && v !== null) {
+        el.setAttribute(k, v);
+      }
+      else {
+        el.removeAttribute(k);
+      }
+    }
+  }
+
   binding.lastValues = newValues;
 };
 
