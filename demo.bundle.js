@@ -244,7 +244,9 @@ exports.boundElements = new Set();
 exports.bindArray = (el, { get, forEach }) => {
 	let bindings = el.bindings = el.bindings || {};
 
-  let anchorComment = document.createComment(' domArrayBindingAnchor ');
+  let anchorComment = document.createComment(' domCommentAnchor: arrayBinding ');
+
+  anchorComment.anchoredElements = new Set([el]);
 
   let binding = bindings.array = {
     anchorComment,
@@ -258,9 +260,10 @@ exports.bindArray = (el, { get, forEach }) => {
 
   // TODO: Don't attach anchorComment unless array is empty.
   el.parentElement.insertBefore(binding.anchorComment, el);
+
+  el.anchorComment = anchorComment;
   el.remove();
 
-  exports.boundElements.add(el);
   exports.update(el, { bindingType: 'array' });
 
   return el;
@@ -276,7 +279,6 @@ exports.bindClass = (el, fn) => {
 
   binding.fns.unshift(fn);
 
-  exports.boundElements.add(el);
   exports.update(el, { bindingType: 'class' });
 
   return el;
@@ -285,12 +287,15 @@ exports.bindClass = (el, fn) => {
 exports.bindPresence = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
-  let anchorComment = document.createComment(' domPresenceBindingAnchor ');
+  let anchorComment = document.createComment(' domCommentAnchor: presenceBinding ');
+
+  anchorComment.anchoredElements = new Set([el]);
+
   let binding = bindings.presence = { anchorComment, el, fn };
 
   anchorComment.binding = binding;
+  el.anchorComment = anchorComment;
 
-  exports.boundElements.add(el);
   exports.update(el, { bindingType: 'presence' });
 
   return el;
@@ -300,7 +305,6 @@ exports.bindTextContent = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.textContent = { fn };
 
-  exports.boundElements.add(el);
   exports.update(el, { bindingType: 'textContent' });
 
   return el;
@@ -317,7 +321,6 @@ exports.bindValue = (el, { get, set }) => {
   binding.get = get || binding.get;
   binding.set = set || binding.set;
 
-  exports.boundElements.add(el);
   exports.update(el, { bindingType: 'value' });
 
   if (set) {
@@ -361,6 +364,111 @@ exports.el = (tagName, ...args) => {
   return el;
 };
 
+exports.contains = (el, node) => {
+  if (el.contains(node)) {
+    return true;
+  }
+
+  let anchorCommentAncestors = [];
+  let cursor = node;
+
+  while (cursor) {
+    let { anchorComment } = cursor;
+
+    if (anchorComment) {
+      anchorCommentAncestors.push(anchorComment);
+    }
+
+    cursor = cursor.parentNode;
+  }
+
+  return anchorCommentAncestors.some(x => el.contains(x));
+};
+
+exports.mutationObserver = new MutationObserver(muts => {
+  let { body } = document;
+  let { boundElements } = exports;
+
+  let addedNodes = muts.map(x => [...x.addedNodes]).flat();
+  let removedNodes = muts.map(x => [...x.removedNodes]).flat();
+
+  let attachedNodes = addedNodes.filter(x => !removedNodes.includes(x));
+  let detachedNodes = removedNodes.filter(x => !addedNodes.includes(x));
+
+  if (detachedNodes.length) {
+    for (let el of boundElements) {
+      if (!exports.contains(body, el)) {
+        boundElements.delete(el);
+      }
+    }
+  }
+
+  let attachedAnchorComments = new Set();
+
+  for (let node of attachedNodes) {
+    if (node.anchoredElements) {
+      attachedAnchorComments.add(node);
+    }
+    else
+    if (node.querySelectorAll) {
+      if (node.bindings) {
+        boundElements.add(node);
+      }
+
+      for (let el of node.querySelectorAll('*')) {
+        if (el.bindings) {
+          boundElements.add(el);
+        }
+
+        let { previousSibling, nextSibling } = el;
+
+        if (previousSibling && previousSibling.anchoredElements) {
+          attachedAnchorComments.add(previousSibling);
+        }
+
+        if (nextSibling && nextSibling.anchoredElements) {
+          attachedAnchorComments.add(nextSibling);
+        }
+      }
+    }
+
+    while (attachedAnchorComments.size) {
+      for (let anchorComment of attachedAnchorComments) {
+        for (let anchoredEl of anchorComment.anchoredElements) {
+          if (anchoredEl.bindings) {
+            boundElements.add(anchoredEl);
+          }
+
+          for (let el of anchoredEl.querySelectorAll('*')) {
+            if (el.bindings) {
+              boundElements.add(el);
+            }
+
+            let { previousSibling, nextSibling } = el;
+
+            if (previousSibling && previousSibling.anchoredElements) {
+              attachedAnchorComments.add(previousSibling);
+            }
+
+            if (nextSibling && nextSibling.anchoredElements) {
+              attachedAnchorComments.add(nextSibling);
+            }
+          }
+        }
+
+        attachedAnchorComments.delete(anchorComment);
+      }
+    }
+  }
+});
+
+addEventListener('DOMContentLoaded', () => {
+  exports.mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+});
+
 exports.update = (el, { bindingType } = {}) => {
   if (!el) {
     for (let el of exports.boundElements) {
@@ -397,13 +505,12 @@ exports.update.array = (el, binding) => {
     return;
   }
 
-  const { lastEls } = binding;
+  let { anchorComment, lastEls } = binding;
 
   for (let el of lastEls) {
+    anchorComment.anchoredElements.delete(el);
     el.remove();
   }
-
-  let { anchorComment } = binding;
 
   let cursor = anchorComment;
   let parentEl = cursor.parentElement;
@@ -414,7 +521,9 @@ exports.update.array = (el, binding) => {
       case 'new': {
         let newEl = binding.templateEl.cloneNode(true);
 
+        anchorComment.anchoredElements.add(newEl);
         newEl.templateElement = binding.templateEl;
+
         binding.forEach(newEl, diff.value);
 
         parentEl.insertBefore(newEl, cursor.nextSibling);
@@ -427,6 +536,8 @@ exports.update.array = (el, binding) => {
 
       case 'existing': {
         let el = lastEls[diff.from];
+
+        anchorComment.anchoredElements.add(el);
 
         parentEl.insertBefore(el, cursor.nextSibling);
         cursor = el;
