@@ -92,7 +92,9 @@ let TodoApp = () => {
     let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
     let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
 
-    dom.bindTextContent(tab, () => `${label} (${app.state[arrayKey].length})`);
+    dom.bindProps(tab, () => ({
+      textContent: `${label} (${app.state[arrayKey].length})`,
+    }));
 
     dom.bindClass(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
@@ -116,7 +118,9 @@ let TodoApp = () => {
 
       let toggle = listItem.querySelector('.todoListItem-toggle');
 
-      dom.bindTextContent(toggle, () => todo.isDone ? 'Undo' : 'Done');
+      dom.bindProps(toggle, () => ({
+        textContent: todo.isDone ? 'Undo' : 'Done',
+      }));
 
       toggle.addEventListener('click', () => {
         todo.isDone = !todo.isDone;
@@ -151,7 +155,7 @@ let TodoApp = () => {
       });
 
       dom.bindPresence(label, () => !todo.isEditing);
-      dom.bindTextContent(label, () => todo.label);
+      dom.bindProps(label, () => ({ textContent: todo.label }));
     },
   });
 
@@ -330,15 +334,21 @@ exports.bindPresence = (el, fn) => {
   return el;
 };
 
-exports.bindTextContent = (el, fn) => {
+exports.bindProps = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
-  let binding = bindings.textContent = { fn };
+
+  let binding = bindings.props = bindings.props || {
+    fns: [],
+    lastValues: {},
+  };
+
+  binding.fns.unshift(fn);
 
   if (exports.contains(document.body, el)) {
     exports.boundElements.add(el);
   }
 
-  exports.update(el, { bindingType: 'textContent' });
+  exports.update(el, { bindingType: 'props' });
 
   return el;
 };
@@ -691,15 +701,32 @@ exports.update.presence = (el, binding) => {
   binding.lastValue = newValue;
 };
 
-exports.update.textContent = (el, binding) => {
-  let newValue = binding.fn();
-  let { lastValue } = binding;
+exports.update.props = (el, binding) => {
+  let newValues = {};
+  let { lastValues } = binding;
 
-  if (newValue !== lastValue) {
-    el.textContent = newValue;
+  for (let fn of binding.fns) {
+    let ret = fn();
+
+    for (let [k, v] of Object.entries(ret)) {
+      if (!Object.keys(newValues).includes(k)) {
+        newValues[k] = v;
+      }
+    }
   }
 
-  binding.lastValue = newValue;
+  for (let k of new Set([
+    ...Object.keys(newValues),
+    ...Object.keys(lastValues),
+  ])) {
+    let v = newValues[k];
+
+    if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
+      el[k] = v;
+    }
+  }
+
+  binding.lastValues = newValues;
 };
 
 exports.update.value = (el, binding) => {

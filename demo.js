@@ -91,7 +91,9 @@ let TodoApp = () => {
     let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
     let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
 
-    dom.bindTextContent(tab, () => `${label} (${app.state[arrayKey].length})`);
+    dom.bindProps(tab, () => ({
+      textContent: `${label} (${app.state[arrayKey].length})`,
+    }));
 
     dom.bindClass(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
@@ -115,7 +117,9 @@ let TodoApp = () => {
 
       let toggle = listItem.querySelector('.todoListItem-toggle');
 
-      dom.bindTextContent(toggle, () => todo.isDone ? 'Undo' : 'Done');
+      dom.bindProps(toggle, () => ({
+        textContent: todo.isDone ? 'Undo' : 'Done',
+      }));
 
       toggle.addEventListener('click', () => {
         todo.isDone = !todo.isDone;
@@ -150,7 +154,7 @@ let TodoApp = () => {
       });
 
       dom.bindPresence(label, () => !todo.isEditing);
-      dom.bindTextContent(label, () => todo.label);
+      dom.bindProps(label, () => ({ textContent: todo.label }));
     },
   });
 
