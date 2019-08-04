@@ -114,8 +114,6 @@ exports.bindPresence = (el, fn) => {
 
   anchorComment.binding = binding;
 
-  el.parentElement.insertBefore(binding.anchorComment, el);
-
   exports.boundElements.add(el);
   exports.update(el, { bindingType: 'presence' });
 
@@ -305,9 +303,14 @@ exports.update.presence = (el, binding) => {
         anchorComment.parentElement.insertBefore(
           el, anchorComment.nextSibling,
         );
+
+        anchorComment.remove();
       }
     } else {
-      el.remove();
+      if (el.parentElement) {
+        el.parentElement.insertBefore(anchorComment, el);
+        el.remove();
+      }
     }
   }
 
