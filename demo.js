@@ -44,7 +44,7 @@ let TodoApp = () => {
 
     todos: [
       { label: 'Procrastinate for months', isDone: true },
-      { label: 'Implement Dominance', isDone: false },
+      { label: 'Implement Dominant', isDone: false },
       { label: 'Add to the fatigue', isDone: false },
     ],
 
