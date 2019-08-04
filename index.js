@@ -81,6 +81,7 @@ exports.bindArray = (el, { get, forEach }) => {
 
   anchorComment.binding = binding;
 
+  // TODO: Don't attach anchorComment unless array is empty.
   el.parentElement.insertBefore(binding.anchorComment, el);
   el.remove();
 
@@ -238,6 +239,7 @@ exports.update.array = (el, binding) => {
       case 'new': {
         let newEl = binding.templateEl.cloneNode(true);
 
+        newEl.templateElement = binding.templateEl;
         binding.forEach(newEl, diff.value);
 
         parentEl.insertBefore(newEl, cursor.nextSibling);
