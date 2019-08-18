@@ -193,6 +193,8 @@ exports.props = (el, fn) => {
   return el;
 };
 
+exports.resolve = x => typeof x === 'function' ? x() : x;
+
 exports.value = (el, { get, set }) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.value = bindings.value || {};
