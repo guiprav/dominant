@@ -67,7 +67,7 @@ let TodoApp = () => {
 
   let newItemInput = app.querySelector('.todoApp-newItemInput');
 
-  dom.bindValue(newItemInput, {
+  dom.value(newItemInput, {
     get: () => app.state.newItemLabel,
     set: x => app.state.newItemLabel = x,
   });
@@ -91,11 +91,11 @@ let TodoApp = () => {
     let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
     let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
 
-    dom.bindProps(tab, () => ({
+    dom.props(tab, () => ({
       textContent: `${label} (${app.state[arrayKey].length})`,
     }));
 
-    dom.bindClass(tab, () => ({
+    dom.class(tab, () => ({
       'todoApp-mActive': app.state.activeTab === key,
     }));
 
@@ -107,19 +107,15 @@ let TodoApp = () => {
     });
   }
 
-  dom.bindArray(app.querySelector('.todoListItem'), {
+  dom.array(app.querySelector('.todoListItem'), {
     get: () => app.state.tabTodos,
 
     forEach: (listItem, todo) => {
-      dom.bindClass(listItem, () => ({
-        'todoListItem-mDone': todo.isDone,
-      }));
+      dom.class(listItem, () => ({ 'todoListItem-mDone': todo.isDone }));
 
       let toggle = listItem.querySelector('.todoListItem-toggle');
 
-      dom.bindProps(toggle, () => ({
-        textContent: todo.isDone ? 'Undo' : 'Done',
-      }));
+      dom.props(toggle, () => ({ textContent: todo.isDone ? 'Undo' : 'Done' }));
 
       toggle.addEventListener('click', () => {
         todo.isDone = !todo.isDone;
@@ -128,9 +124,9 @@ let TodoApp = () => {
 
       let input = listItem.querySelector('.todoListItem-input');
 
-      dom.bindPresence(input, () => todo.isEditing);
+      dom.presence(input, () => todo.isEditing);
 
-      dom.bindValue(input, {
+      dom.value(input, {
         get: () => todo.label,
         set: x => todo.label = x,
       });
@@ -153,8 +149,8 @@ let TodoApp = () => {
         dom.update();
       });
 
-      dom.bindPresence(label, () => !todo.isEditing);
-      dom.bindProps(label, () => ({ textContent: todo.label }));
+      dom.presence(label, () => !todo.isEditing);
+      dom.props(label, () => ({ textContent: todo.label }));
     },
   });
 

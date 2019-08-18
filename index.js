@@ -66,7 +66,7 @@ exports._arrayDiff = (a, b) => {
 
 exports.boundElements = new Set();
 
-exports.bindArray = (el, { get, forEach }) => {
+exports.array = (el, { get, forEach }) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let anchorComment = document.createComment(' domCommentAnchor: arrayBinding ');
@@ -98,7 +98,7 @@ exports.bindArray = (el, { get, forEach }) => {
   return el;
 };
 
-exports.bindAttrs = (el, fn) => {
+exports.attrs = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let binding = bindings.attrs = bindings.attrs || {
@@ -117,7 +117,7 @@ exports.bindAttrs = (el, fn) => {
   return el;
 };
 
-exports.bindClass = (el, fn) => {
+exports.class = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let binding = bindings.class = bindings.class || {
@@ -136,7 +136,7 @@ exports.bindClass = (el, fn) => {
   return el;
 };
 
-exports.bindListener = (el, type, fn) => {
+exports.listener = (el, type, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let binding = bindings.listeners = bindings.listeners || {
@@ -153,7 +153,7 @@ exports.bindListener = (el, type, fn) => {
   return el;
 };
 
-exports.bindPresence = (el, fn) => {
+exports.presence = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let anchorComment = document.createComment(' domCommentAnchor: presenceBinding ');
@@ -174,7 +174,7 @@ exports.bindPresence = (el, fn) => {
   return el;
 };
 
-exports.bindProps = (el, fn) => {
+exports.props = (el, fn) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let binding = bindings.props = bindings.props || {
@@ -193,7 +193,7 @@ exports.bindProps = (el, fn) => {
   return el;
 };
 
-exports.bindValue = (el, { get, set }) => {
+exports.value = (el, { get, set }) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.value = bindings.value || {};
 
