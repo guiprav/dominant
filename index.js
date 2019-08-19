@@ -321,19 +321,21 @@ exports.mutationObserver = new MutationObserver(muts => {
       attachBoundElement(root);
     }
 
+    for (let n of root.childNodes) {
+      if (n.anchoredElements) {
+        attachedAnchorComments.add(n);
+      }
+    }
+
     for (let el of root.querySelectorAll('*')) {
       if (el.bindings) {
         attachBoundElement(el);
       }
 
-      let { previousSibling, nextSibling } = el;
-
-      if (previousSibling && previousSibling.anchoredElements) {
-        attachedAnchorComments.add(previousSibling);
-      }
-
-      if (nextSibling && nextSibling.anchoredElements) {
-        attachedAnchorComments.add(nextSibling);
+      for (let n of root.childNodes) {
+        if (n.anchoredElements) {
+          attachedAnchorComments.add(n);
+        }
       }
     }
   };
