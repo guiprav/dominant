@@ -195,6 +195,25 @@ exports.props = (el, fn) => {
 
 exports.resolve = x => typeof x === 'function' ? x() : x;
 
+exports.style = (el, fn) => {
+	let bindings = el.bindings = el.bindings || {};
+
+  let binding = bindings.style = bindings.style || {
+    fns: [],
+    lastValues: {},
+  };
+
+  binding.fns.unshift(fn);
+
+  if (exports.contains(document.body, el)) {
+    exports.boundElements.add(el);
+  }
+
+  exports.update(el, { bindingType: 'style' });
+
+  return el;
+};
+
 exports.value = (el, { get, set }) => {
 	let bindings = el.bindings = el.bindings || {};
   let binding = bindings.value = bindings.value || {};
@@ -332,7 +351,7 @@ exports.mutationObserver = new MutationObserver(muts => {
         attachBoundElement(el);
       }
 
-      for (let n of root.childNodes) {
+      for (let n of el.childNodes) {
         if (n.anchoredElements) {
           attachedAnchorComments.add(n);
         }
@@ -600,6 +619,34 @@ exports.update.props = (el, binding) => {
 
     if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
       el[k] = v;
+    }
+  }
+
+  binding.lastValues = newValues;
+};
+
+exports.update.style = (el, binding) => {
+  let newValues = {};
+  let { lastValues } = binding;
+
+  for (let fn of binding.fns) {
+    let ret = fn();
+
+    for (let [k, v] of Object.entries(ret)) {
+      if (!Object.keys(newValues).includes(k)) {
+        newValues[k] = Boolean(v);
+      }
+    }
+  }
+
+  for (let k of new Set([
+    ...Object.keys(newValues),
+    ...Object.keys(lastValues),
+  ])) {
+    let v = newValues[k];
+
+    if (!Object.keys(lastValues).includes(k) || v !== lastValues[k]) {
+      el.style.setProperty(k, v);
     }
   }
 
