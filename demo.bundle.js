@@ -634,7 +634,7 @@ exports.update = (el, { bindingType } = {}) => {
 };
 
 exports.update.repeat = (el, binding) => {
-  let newValues = [...binding.get()];
+  let newValues = [...binding.get() || []];
   let { lastValues } = binding;
 
   let diffs = exports._arrayDiff(lastValues || [], newValues);
