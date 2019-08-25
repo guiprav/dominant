@@ -66,19 +66,23 @@ exports._arrayDiff = (a, b) => {
 
 exports.boundElements = new Set();
 
-exports.array = (el, { get, forEach }) => {
+exports.comment = text => document.createComment(
+  ` ${text !== null && text !== undefined ? text : 'comment'} `,
+);
+
+exports.repeat = (el, { get, map }) => {
 	let bindings = el.bindings = el.bindings || {};
 
   let anchorComment = document.createComment(' domCommentAnchor: arrayBinding ');
 
   anchorComment.anchoredElements = new Set([el]);
 
-  let binding = bindings.array = {
+  let binding = bindings.repeat = {
     anchorComment,
     templateEl: el,
     lastEls: [],
     get,
-    forEach,
+    map,
   };
 
   anchorComment.binding = binding;
@@ -89,7 +93,7 @@ exports.array = (el, { get, forEach }) => {
   el.anchorComment = anchorComment;
   el.remove();
 
-  if (exports.contains(document.body, el)) {
+  if (exports.contains(document.body, anchorComment)) {
     exports.boundElements.add(el);
   }
 
@@ -321,9 +325,10 @@ exports.mutationObserver = new MutationObserver(muts => {
 
   let attachedAnchorComments = new Set();
 
-  let attachBoundElement = el => {
+  let attachElement = el => {
     if (!boundElements.has(el)) {
       boundElements.add(el);
+      exports.update(el);
 
       let { listeners } = el.bindings;
 
@@ -337,7 +342,7 @@ exports.mutationObserver = new MutationObserver(muts => {
 
   let findRelevantNodes = root => {
     if (root.bindings) {
-      attachBoundElement(root);
+      attachElement(root);
     }
 
     for (let n of root.childNodes) {
@@ -348,7 +353,7 @@ exports.mutationObserver = new MutationObserver(muts => {
 
     for (let el of root.querySelectorAll('*')) {
       if (el.bindings) {
-        attachBoundElement(el);
+        attachElement(el);
       }
 
       for (let n of el.childNodes) {
@@ -452,7 +457,7 @@ exports.update = (el, { bindingType } = {}) => {
   exports.update[bindingType](el, binding);
 };
 
-exports.update.array = (el, binding) => {
+exports.update.repeat = (el, binding) => {
   let newValues = [...binding.get()];
   let { lastValues } = binding;
 
@@ -476,12 +481,15 @@ exports.update.array = (el, binding) => {
   for (let diff of diffs) {
     switch (diff.type) {
       case 'new': {
-        let newEl = binding.templateEl.cloneNode(true);
+        let clonedEl = binding.templateEl.cloneNode(true);
+        let newEl = binding.map(diff.value, clonedEl);
+
+        if (newEl === undefined) {
+          newEl = clonedEl;
+        }
 
         anchorComment.anchoredElements.add(newEl);
         newEl.templateElement = binding.templateEl;
-
-        binding.forEach(newEl, diff.value);
 
         parentEl.insertBefore(newEl, cursor.nextSibling);
         cursor = newEl;

@@ -107,10 +107,11 @@ let TodoApp = () => {
     });
   }
 
-  dom.array(app.querySelector('.todoListItem'), {
+  dom.repeat(app.querySelector('.todoListItem'), {
     get: () => app.state.tabTodos,
 
-    forEach: (listItem, todo) => {
+    map: (todo, listItem) => {
+      console.log({ todo, listItem });
       dom.class(listItem, () => ({ 'todoListItem-mDone': todo.isDone }));
 
       let toggle = listItem.querySelector('.todoListItem-toggle');
