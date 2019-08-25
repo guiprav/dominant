@@ -345,6 +345,10 @@ exports.mutationObserver = new MutationObserver(muts => {
       attachElement(root);
     }
 
+    if (root.nodeName === '#comment') {
+      return;
+    }
+
     for (let n of root.childNodes) {
       if (n.anchoredElements) {
         attachedAnchorComments.add(n);
