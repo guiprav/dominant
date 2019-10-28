@@ -1,55 +1,233 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+module.exports = (a, b) => {
+  let diffs = {
+    moved: [],
+    added: [],
+    removed: [],
+  };
+
+  for (let [i, x] of a.entries()) {
+    if (b[i] === x) {
+      continue;
+    }
+
+    let newIndex = b.findIndex((y, j) => {
+      if (y !== x) {
+        return false;
+      }
+
+      return !diffs.moved.some(
+        z => z.value === y && z.to !== j,
+      );
+    });
+
+    if (newIndex === -1) {
+      diffs.removed.push({ from: i });
+      continue;
+    }
+
+    diffs.moved.push({
+      value: x,
+      from: i,
+      to: newIndex,
+    });
+  }
+
+  for (let [i, x] of b.entries()) {
+    if (a[i] === x) {
+      continue;
+    }
+
+    if (diffs.moved.some(y => y.value == x && y.to === i)) {
+      continue;
+    }
+
+    diffs.added.push({
+      value: x,
+      to: i,
+    });
+  }
+  
+  if (Object.values(diffs).every(x => x.length === 0)) {
+    return null;
+  }
+
+  return b.map((x, i) => {
+    if (a[i] === x) {
+      return { type: 'existing', from: i };
+    }
+
+    let moved = diffs.moved.find(y => y.to === i);
+
+    return moved
+      ? { type: 'existing', from: moved.from }
+      : { type: 'new', value: x };
+  });
+};
+
+},{}],2:[function(require,module,exports){
 window.dom = require('./newIndex');
+
+window.shuffle = xs => {
+  for (let i = xs.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+
+  return xs;
+};
 
 let TodoApp = () => {
   let state = {
-    inputAriaWhatever: 'who cares?',
-    inputBgColor: 'salmon',
-    inputColor: 'yellow',
-    inputValue: 'test',
-    derp: true,
-    durr: 0,
+    newItemLabel: '',
+    activeTab: 'all',
+
+    todos: [
+      { label: 'Procrastinate for months', isDone: true },
+      { label: 'Implement Dominant', isDone: false },
+      { label: 'Add to the fatigue', isDone: false },
+    ],
+
+    get pending() {
+      return state.todos.filter(x => !x.isDone);
+    },
+
+    get done() {
+      return state.todos.filter(x => x.isDone);
+    },
+
+    get tabTodos() {
+      switch (state.activeTab) {
+        case 'all': return state.todos;
+        case 'pending': return state.pending;
+        case 'done': return state.done;
+      }
+    }
   };
 
   return dom.el('div', { state, class: 'todoApp' }, [
-    dom.el('input', {
-      'aria-whatever': dom.binding(() => state.inputAriaWhatever),
+    dom.el('h1', document.title),
 
-      style: dom.binding(() => ({
-        'background-color': state.inputBgColor,
-        color: state.inputColor,
-      })),
+    dom.el('div', { class: 'todoApp-contentBox' }, [
+      dom.el('input', {
+        class: 'todoApp-newItemInput',
+        placeholder: 'What next?',
 
-      value: dom.binding({
-        get: () => state.inputValue,
-        set: x => state.inputValue = x,
+        value: dom.binding({
+          get: () => state.newItemLabel,
+          set: x => state.newItemLabel = x,
+        }),
+
+        onKeyUp: ev => {
+          if (ev.key === 'Enter') {
+            state.todos.unshift({ label: state.newItemLabel, isDone: false });
+            state.newItemLabel = '';
+
+            dom.update();
+          }
+        },
       }),
-    }),
 
-    dom.el('div', {
-      class: dom.binding(() => ({
-        derp: state.derp,
-        durr: state.durr,
-        derpDurr: state.derp && state.durr,
-      })),
-    }, [
-      'Derp? Durr? ', dom.if(
-        () => state.derp && state.durr,
+      dom.el('div', { class: 'todoApp-tabs' }, [
+        dom.map(['all', 'pending', 'done'], key => {
+          let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
+          let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
 
-        dom.el('span', [
-          'Derp-',
+          return dom.el('a', {
+            href: '#',
 
-          dom.el('b', {
-            style: dom.binding(() => ({ color: state.inputColor })),
-          }, [
-            'durr',
-          ]),
+            class: dom.binding(() => ({
+              'todoApp-tab': true,
+              'todoApp-mActive': state.activeTab === key,
+            })),
 
-          '!',
+            onClick: ev => {
+              ev.preventDefault();
+
+              state.activeTab = key;
+              dom.update();
+            },
+
+            textContent: dom.binding(() => `${label} (${state[arrayKey].length})`),
+          });
+        }),
+      ]),
+
+      dom.el('div', { class: 'todoApp-todoList' }, dom.map(
+        () => state.tabTodos, todo => dom.el('div', {
+          class: dom.binding(() => ({
+            todoListItem: true,
+            'todoApp-mDone': todo.isDone,
+          })),
+        }, [
+          dom.el('button', {
+            class: 'todoListItem-toggle',
+            textContent: dom.binding(() => todo.isDone ? 'Undo' : 'Done'),
+
+            onClick: () => {
+              todo.isDone = !todo.isDone;
+              dom.update();
+            },
+          }),
+
+          dom.if(
+            () => todo.isEditing,
+
+            dom.el('input', {
+              class: 'todoListItem-input',
+
+              value: dom.binding({
+                get: () => todo.label,
+                set: x => todo.label = x,
+              }),
+
+              onKeyUp: ev => {
+                if (ev.key === 'Enter') {
+                  todo.isEditing = false;
+                  dom.update();
+                }
+              },
+            }),
+
+            dom.el('span', {
+              class: 'todoListItem-label',
+
+              onClick: () => {
+                for (let todo of state.todos) {
+                  todo.isEditing = false;
+                }
+
+                todo.isEditing = true;
+                dom.update();
+              },
+
+              textContent: dom.binding(() => todo.label),
+            }),
+          ),
         ]),
+      )),
 
-        dom.el('span', '...'),
-      ),
+      dom.el('button', {
+        class: 'todoApp-listClearBtn',
+
+        onClick: () => {
+          state.todos = [];
+          dom.update();
+        },
+      }, [
+        'Clear',
+      ]),
+
+      dom.el('button', {
+        class: 'todoApp-listShuffleBtn',
+
+        onClick: () => {
+          shuffle(state.todos);
+          dom.update();
+        },
+      }, [
+        'Shuffle',
+      ]),
     ]),
   ]);
 };
@@ -58,7 +236,9 @@ addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(window.todoApp = TodoApp());
 });
 
-},{"./newIndex":2}],2:[function(require,module,exports){
+},{"./newIndex":3}],3:[function(require,module,exports){
+let arrayDiff = require('./arrayDiff');
+
 exports.Binding = class Binding {
   constructor(x) {
     switch (typeof x) {
@@ -79,6 +259,8 @@ exports.Binding = class Binding {
 exports.binding = (...args) => new exports.Binding(...args);
 
 exports.boundNodes = new Set();
+
+exports.comment = text => document.createComment(` ${text || 'comment'} `);
 
 exports.el = (tagNameOrEl, ...args) => {
   let props;
@@ -105,6 +287,11 @@ exports.el = (tagNameOrEl, ...args) => {
       continue;
     }
 
+    if (k.startsWith('on')) {
+      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
+      continue;
+    }
+
     if (k === 'class') {
       k = 'className';
     }
@@ -125,17 +312,21 @@ exports.el = (tagNameOrEl, ...args) => {
   return el;
 };
 
-exports.comment = text => document.createComment(` ${text || 'comment'} `);
-
 exports.if = (predFn, thenNode, elseNode) => {
   let anchorComment = exports.comment('anchorComment: conditional');
 
   anchorComment.bindings = {
-    conditional: [dom.binding({
-      get: predFn,
-      thenNode,
-      elseNode,
-    })],
+    conditional: [dom.binding({ get: predFn, thenNode, elseNode })],
+  };
+
+  return anchorComment;
+};
+
+exports.map = (array, fn) => {
+  let anchorComment = exports.comment('anchorComment: map');
+
+  anchorComment.bindings = {
+    map: [dom.binding({ get: () => exports.resolve(array), fn })],
   };
 
   return anchorComment;
@@ -183,7 +374,6 @@ exports.mutationObserver = new MutationObserver(muts => {
 
     boundNodes.add(n);
     exports.update(n);
-    console.log('attached:', n);
   };
 
   for (let n of addedNodes) {
@@ -204,17 +394,19 @@ exports.mutationObserver = new MutationObserver(muts => {
       }
     }
 
-    for (let el of n.querySelectorAll('*')) {
-      if (el.bindings) {
-        attachNode(el);
-      }
+    if (n.querySelectorAll) {
+      for (let el of n.querySelectorAll('*')) {
+        if (el.bindings) {
+          attachNode(el);
+        }
 
-      for (
-        let childComment of
-        [...el.childNodes].filter(x => x.nodeName === '#comment')
-      ) {
-        if (childComment.bindings) {
-          attachNode(childComment);
+        for (
+          let childComment of
+          [...el.childNodes].filter(x => x.nodeName === '#comment')
+        ) {
+          if (childComment.bindings) {
+            attachNode(childComment);
+          }
         }
       }
     }
@@ -305,6 +497,53 @@ exports.update.conditional = (el, key, binding) => {
   binding.lastValue = newValue;
 };
 
+exports.update.map = (anchorComment, key, binding) => {
+  let newArray = [...binding.get() || []];
+  let { lastArray, lastNodes } = binding;
+
+  let diffs = arrayDiff(lastArray || [], newArray);
+
+  console.log({ lastArray, newArray, diffs });
+  if (!diffs) {
+    return;
+  }
+
+  for (let el of lastNodes || []) {
+    el.remove();
+  }
+
+  let cursor = anchorComment;
+  let parentEl = anchorComment.parentElement;
+  let updatedNodes = [];
+
+  for (let diff of diffs) {
+    switch (diff.type) {
+      case 'new': {
+        let nNew = binding.fn(diff.value);
+
+        parentEl.insertBefore(nNew, cursor.nextSibling);
+        cursor = nNew;
+
+        updatedNodes.push(nNew);
+        break;
+      }
+
+      case 'existing': {
+        let nExisting = lastNodes[diff.from];
+
+        parentEl.insertBefore(nExisting, cursor.nextSibling);
+        cursor = nExisting;
+
+        updatedNodes.push(nExisting);
+        break;
+      }
+    }
+  }
+
+  binding.lastArray = newArray;
+  binding.lastNodes = updatedNodes;
+};
+
 exports.update.otherProps = (el, propName, binding) => {
   let newValue = binding.get();
   let { lastValue } = binding;
@@ -369,4 +608,4 @@ exports.update.value = (el, propName, binding) => {
   }
 };
 
-},{}]},{},[1]);
+},{"./arrayDiff":1}]},{},[2]);

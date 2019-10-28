@@ -1,3 +1,5 @@
+let arrayDiff = require('./arrayDiff');
+
 exports.Binding = class Binding {
   constructor(x) {
     switch (typeof x) {
@@ -18,6 +20,8 @@ exports.Binding = class Binding {
 exports.binding = (...args) => new exports.Binding(...args);
 
 exports.boundNodes = new Set();
+
+exports.comment = text => document.createComment(` ${text || 'comment'} `);
 
 exports.el = (tagNameOrEl, ...args) => {
   let props;
@@ -44,6 +48,11 @@ exports.el = (tagNameOrEl, ...args) => {
       continue;
     }
 
+    if (k.startsWith('on')) {
+      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
+      continue;
+    }
+
     if (k === 'class') {
       k = 'className';
     }
@@ -64,17 +73,21 @@ exports.el = (tagNameOrEl, ...args) => {
   return el;
 };
 
-exports.comment = text => document.createComment(` ${text || 'comment'} `);
-
 exports.if = (predFn, thenNode, elseNode) => {
   let anchorComment = exports.comment('anchorComment: conditional');
 
   anchorComment.bindings = {
-    conditional: [dom.binding({
-      get: predFn,
-      thenNode,
-      elseNode,
-    })],
+    conditional: [dom.binding({ get: predFn, thenNode, elseNode })],
+  };
+
+  return anchorComment;
+};
+
+exports.map = (array, fn) => {
+  let anchorComment = exports.comment('anchorComment: map');
+
+  anchorComment.bindings = {
+    map: [dom.binding({ get: () => exports.resolve(array), fn })],
   };
 
   return anchorComment;
@@ -122,7 +135,6 @@ exports.mutationObserver = new MutationObserver(muts => {
 
     boundNodes.add(n);
     exports.update(n);
-    console.log('attached:', n);
   };
 
   for (let n of addedNodes) {
@@ -143,17 +155,19 @@ exports.mutationObserver = new MutationObserver(muts => {
       }
     }
 
-    for (let el of n.querySelectorAll('*')) {
-      if (el.bindings) {
-        attachNode(el);
-      }
+    if (n.querySelectorAll) {
+      for (let el of n.querySelectorAll('*')) {
+        if (el.bindings) {
+          attachNode(el);
+        }
 
-      for (
-        let childComment of
-        [...el.childNodes].filter(x => x.nodeName === '#comment')
-      ) {
-        if (childComment.bindings) {
-          attachNode(childComment);
+        for (
+          let childComment of
+          [...el.childNodes].filter(x => x.nodeName === '#comment')
+        ) {
+          if (childComment.bindings) {
+            attachNode(childComment);
+          }
         }
       }
     }
@@ -242,6 +256,53 @@ exports.update.conditional = (el, key, binding) => {
   }
 
   binding.lastValue = newValue;
+};
+
+exports.update.map = (anchorComment, key, binding) => {
+  let newArray = [...binding.get() || []];
+  let { lastArray, lastNodes } = binding;
+
+  let diffs = arrayDiff(lastArray || [], newArray);
+
+  console.log({ lastArray, newArray, diffs });
+  if (!diffs) {
+    return;
+  }
+
+  for (let el of lastNodes || []) {
+    el.remove();
+  }
+
+  let cursor = anchorComment;
+  let parentEl = anchorComment.parentElement;
+  let updatedNodes = [];
+
+  for (let diff of diffs) {
+    switch (diff.type) {
+      case 'new': {
+        let nNew = binding.fn(diff.value);
+
+        parentEl.insertBefore(nNew, cursor.nextSibling);
+        cursor = nNew;
+
+        updatedNodes.push(nNew);
+        break;
+      }
+
+      case 'existing': {
+        let nExisting = lastNodes[diff.from];
+
+        parentEl.insertBefore(nExisting, cursor.nextSibling);
+        cursor = nExisting;
+
+        updatedNodes.push(nExisting);
+        break;
+      }
+    }
+  }
+
+  binding.lastArray = newArray;
+  binding.lastNodes = updatedNodes;
 };
 
 exports.update.otherProps = (el, propName, binding) => {
