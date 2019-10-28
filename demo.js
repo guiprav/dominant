@@ -10,35 +10,7 @@ window.shuffle = xs => {
 };
 
 let TodoApp = () => {
-  let app = dom.el('div', { class: 'todoApp' }, [
-    dom.el('h1', document.title),
-
-    dom.el('div', { class: 'todoApp-contentBox' }, [
-      dom.el('input', {
-        class: 'todoApp-newItemInput',
-        placeholder: 'What next?',
-      }),
-
-      dom.el('div', { class: 'todoApp-tabs' }, [
-        ['all', 'pending', 'done'].map(
-          x => dom.el('a', { class: 'todoApp-tab', key: x, href: '#' }),
-        ),
-      ]),
-
-      dom.el('div', { class: 'todoApp-todoList' }, [
-        dom.el('div', { class: 'todoListItem' }, [
-          dom.el('button', { class: 'todoListItem-toggle' }),
-          dom.el('input', { class: 'todoListItem-input' }),
-          dom.el('span', { class: 'todoListItem-label' }),
-        ]),
-      ]),
-
-      dom.el('button', { class: 'todoApp-listClearBtn' }, 'Clear'),
-      dom.el('button', { class: 'todoApp-listShuffleBtn' }, 'Shuffle'),
-    ]),
-  ]);
-
-  app.state = {
+  let state = {
     newItemLabel: '',
     activeTab: 'all',
 
@@ -49,123 +21,147 @@ let TodoApp = () => {
     ],
 
     get pending() {
-      return this.todos.filter(x => !x.isDone);
+      return state.todos.filter(x => !x.isDone);
     },
 
     get done() {
-      return this.todos.filter(x => x.isDone);
+      return state.todos.filter(x => x.isDone);
     },
 
     get tabTodos() {
-      switch (this.activeTab) {
-        case 'all': return this.todos;
-        case 'pending': return this.pending;
-        case 'done': return this.done;
+      switch (state.activeTab) {
+        case 'all': return state.todos;
+        case 'pending': return state.pending;
+        case 'done': return state.done;
       }
     }
   };
 
-  let newItemInput = app.querySelector('.todoApp-newItemInput');
+  return dom.el('div', { state, class: 'todoApp' }, [
+    dom.el('h1', document.title),
 
-  dom.value(newItemInput, {
-    get: () => app.state.newItemLabel,
-    set: x => app.state.newItemLabel = x,
-  });
+    dom.el('div', { class: 'todoApp-contentBox' }, [
+      dom.el('input', {
+        class: 'todoApp-newItemInput',
+        placeholder: 'What next?',
 
-  newItemInput.addEventListener('keyup', ev => {
-    if (ev.key === 'Enter') {
-      app.state.todos.unshift({
-        label: app.state.newItemLabel,
-        isDOne: false,
-      });
+        value: dom.binding({
+          get: () => state.newItemLabel,
+          set: x => state.newItemLabel = x,
+        }),
 
-      app.state.newItemLabel = '';
+        onKeyUp: ev => {
+          if (ev.key === 'Enter') {
+            state.todos.unshift({ label: state.newItemLabel, isDone: false });
+            state.newItemLabel = '';
 
-      dom.update();
-    }
-  });
+            dom.update();
+          }
+        },
+      }),
 
-  for (let tab of app.querySelectorAll('.todoApp-tab')) {
-    let { key } = tab;
+      dom.el('div', { class: 'todoApp-tabs' }, [
+        dom.map(['all', 'pending', 'done'], key => {
+          let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
+          let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
 
-    let label = { all: 'All', pending: 'Pending', done: 'Done' }[key];
-    let arrayKey = { all: 'todos', pending: 'pending', done: 'done' }[key];
+          return dom.el('a', {
+            href: '#',
 
-    dom.props(tab, () => ({
-      textContent: `${label} (${app.state[arrayKey].length})`,
-    }));
+            class: dom.binding(() => ({
+              'todoApp-tab': true,
+              'todoApp-mActive': state.activeTab === key,
+            })),
 
-    dom.class(tab, () => ({
-      'todoApp-mActive': app.state.activeTab === key,
-    }));
+            onClick: ev => {
+              ev.preventDefault();
 
-    tab.addEventListener('click', ev => {
-      ev.preventDefault();
+              state.activeTab = key;
+              dom.update();
+            },
 
-      app.state.activeTab = key;
-      dom.update();
-    });
-  }
+            textContent: dom.binding(() => `${label} (${state[arrayKey].length})`),
+          });
+        }),
+      ]),
 
-  dom.repeat(app.querySelector('.todoListItem'), {
-    get: () => app.state.tabTodos,
+      dom.el('div', { class: 'todoApp-todoList' }, dom.map(
+        () => state.tabTodos, todo => dom.el('div', {
+          class: dom.binding(() => ({
+            todoListItem: true,
+            'todoApp-mDone': todo.isDone,
+          })),
+        }, [
+          dom.el('button', {
+            class: 'todoListItem-toggle',
+            textContent: dom.binding(() => todo.isDone ? 'Undo' : 'Done'),
 
-    map: (todo, listItem) => {
-      console.log({ todo, listItem });
-      dom.class(listItem, () => ({ 'todoListItem-mDone': todo.isDone }));
+            onClick: () => {
+              todo.isDone = !todo.isDone;
+              dom.update();
+            },
+          }),
 
-      let toggle = listItem.querySelector('.todoListItem-toggle');
+          dom.if(
+            () => todo.isEditing,
 
-      dom.props(toggle, () => ({ textContent: todo.isDone ? 'Undo' : 'Done' }));
+            dom.el('input', {
+              class: 'todoListItem-input',
 
-      toggle.addEventListener('click', () => {
-        todo.isDone = !todo.isDone;
-        dom.update();
-      });
+              value: dom.binding({
+                get: () => todo.label,
+                set: x => todo.label = x,
+              }),
 
-      let input = listItem.querySelector('.todoListItem-input');
+              onKeyUp: ev => {
+                if (ev.key === 'Enter') {
+                  todo.isEditing = false;
+                  dom.update();
+                }
+              },
+            }),
 
-      dom.presence(input, () => todo.isEditing);
+            dom.el('span', {
+              class: 'todoListItem-label',
 
-      dom.value(input, {
-        get: () => todo.label,
-        set: x => todo.label = x,
-      });
+              onClick: () => {
+                for (let todo of state.todos) {
+                  todo.isEditing = false;
+                }
 
-      input.addEventListener('keyup', ev => {
-        if (ev.key === 'Enter') {
-          todo.isEditing = false;
+                todo.isEditing = true;
+                dom.update();
+              },
+
+              textContent: dom.binding(() => todo.label),
+            }),
+          ),
+        ]),
+      )),
+
+      dom.el('button', {
+        class: 'todoApp-listClearBtn',
+
+        onClick: () => {
+          state.todos = [];
           dom.update();
-        }
-      });
+        },
+      }, [
+        'Clear',
+      ]),
 
-      let label = listItem.querySelector('.todoListItem-label');
+      dom.el('button', {
+        class: 'todoApp-listShuffleBtn',
 
-      label.addEventListener('click', () => {
-        for (let todo of app.state.todos) {
-          todo.isEditing = false;
-        }
-
-        todo.isEditing = true;
-        dom.update();
-      });
-
-      dom.presence(label, () => !todo.isEditing);
-      dom.props(label, () => ({ textContent: todo.label }));
-    },
-  });
-
-  app.querySelector('.todoApp-listClearBtn').addEventListener('click', () => {
-    app.state.todos = [];
-    dom.update();
-  });
-
-  app.querySelector('.todoApp-listShuffleBtn').addEventListener('click', () => {
-    shuffle(app.state.todos);
-    dom.update();
-  });
-
-  return app;
+        onClick: () => {
+          shuffle(state.todos);
+          dom.update();
+        },
+      }, [
+        'Shuffle',
+      ]),
+    ]),
+  ]);
 };
 
 addEventListener('DOMContentLoaded', () => {
