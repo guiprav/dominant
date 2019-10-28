@@ -64,6 +64,14 @@ exports._arrayDiff = (a, b) => {
   });
 };
 
+exports.Binding = class Binding {
+  constructor(...args) {
+    this.args = args;
+  }
+};
+
+exports.binding = (...args) => new Binding(...args);
+
 exports.boundElements = new Set();
 
 exports.comment = text => document.createComment(
