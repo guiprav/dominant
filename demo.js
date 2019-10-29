@@ -79,9 +79,9 @@ let TodoApp = () => {
               state.activeTab = key;
               dom.update();
             },
-
-            textContent: dom.binding(() => `${label} (${state[arrayKey].length})`),
-          });
+          }, [
+            dom.text(() => `${label} (${state[arrayKey].length})`),
+          ]);
         }),
       ]),
 
@@ -94,13 +94,14 @@ let TodoApp = () => {
         }, [
           dom.el('button', {
             class: 'todoListItem-toggle',
-            textContent: dom.binding(() => todo.isDone ? 'Undo' : 'Done'),
 
             onClick: () => {
               todo.isDone = !todo.isDone;
               dom.update();
             },
-          }),
+          }, [
+            dom.text(() => todo.isDone ? 'Undo' : 'Done'),
+          ]),
 
           dom.if(
             () => todo.isEditing,

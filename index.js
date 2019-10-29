@@ -183,6 +183,16 @@ addEventListener('DOMContentLoaded', () => {
 
 exports.resolve = x => typeof x === 'function' ? x() : x;
 
+exports.text = fn => {
+  let anchorComment = exports.comment('anchorComment: text');
+
+  anchorComment.bindings = {
+    text: [dom.binding({ get: fn })],
+  };
+
+  return anchorComment;
+};
+
 exports.update = (n, key, binding) => {
   if (!n) {
     for (let n of exports.boundNodes) {
@@ -346,6 +356,29 @@ exports.update.style = (el, propName, binding) => {
   }
 
   binding.lastValues = newValues;
+};
+
+exports.update.text = (n, key, binding) => {
+  let newValue = binding.get();
+
+  let newText = newValue !== undefined && newValue !== null
+    ? String(newValue)
+    : '';
+
+  let { lastText } = binding;
+
+  if (newText !== lastText) {
+    if (binding.textNode) {
+      binding.textNode.remove();
+    }
+
+    n.parentElement.insertBefore(
+      binding.textNode = document.createTextNode(newText),
+      n.nextSibling,
+    );
+  }
+
+  binding.lastText = newText;
 };
 
 exports.update.value = (el, propName, binding) => {
