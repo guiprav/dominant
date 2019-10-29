@@ -386,6 +386,8 @@ exports.update.value = (el, propName, binding) => {
     el.addEventListener('keyup', binding.setHandler = ev => {
       let x = ev.target.value;
       binding.lastValue = binding.set ? binding.set(x) : x;
+
+      exports.update();
     });
   }
 
