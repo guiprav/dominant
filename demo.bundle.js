@@ -313,6 +313,23 @@ exports.el = (tagNameOrEl, ...args) => {
   return el;
 };
 
+exports.html = html => {
+  let wrapper = exports.el('div');
+
+  wrapper.innerHTML = html.trim();
+
+  switch (wrapper.childNodes.length) {
+    case 0:
+      return null;
+
+    case 1:
+      return wrapper.childNodes[0];
+
+    default:
+      return [...wrapper.childNodes];
+  }
+};
+
 exports.if = (predFn, thenNode, elseNode) => {
   let anchorComment = exports.comment('anchorComment: conditional');
 
