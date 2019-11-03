@@ -43,13 +43,17 @@ exports.el = (tagNameOrEl, ...args) => {
       continue;
     }
 
-    if (k.startsWith('aria-') || k.startsWith('data-')) {
-      el.setAttribute(k, v);
+    if (k.startsWith('on')) {
+      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
       continue;
     }
 
-    if (k.startsWith('on')) {
-      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
+    if (
+      k.startsWith('aria-') ||
+      k.startsWith('data-') ||
+      el.tagName.toUpperCase() === 'SVG'
+    ) {
+      el.setAttribute(k, v);
       continue;
     }
 
@@ -336,7 +340,11 @@ exports.update.otherProps = (el, propName, binding) => {
   let { lastValue } = binding;
 
   if (newValue !== lastValue) {
-    if (propName.startsWith('aria-') || propName.startsWith('data-')) {
+    if (
+      propName.startsWith('aria-') ||
+      propName.startsWith('data-') ||
+      el.tagName.toUpperCase() === 'SVG'
+    ) {
       if (newValue === undefined || newValue === null) {
         el.removeAttribute(propName);
       }
