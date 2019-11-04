@@ -23,16 +23,25 @@ exports.boundNodes = new Set();
 
 exports.comment = text => document.createComment(` ${text || 'comment'} `);
 
-exports.el = (tagNameOrEl, ...args) => {
+exports.el = (el, ...args) => {
   let props;
 
   if (args[0] && args[0].constructor === Object) {
     props = args.shift();
   }
 
-  let el = tagNameOrEl instanceof Element
-    ? tagNameOrEl
-    : document.createElement(tagNameOrEl);
+  switch (typeof el) {
+    case 'string':
+      el = document.createElement(el);
+      break;
+
+    case 'function':
+      el = el();
+      break;
+
+    default:
+      break;
+  }
 
   for (let [k, v] of Object.entries(props || {})) {
     if (v instanceof exports.Binding) {
