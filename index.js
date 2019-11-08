@@ -107,7 +107,7 @@ exports.if = (predFn, thenNode, elseNode) => {
   let anchorComment = exports.comment('anchorComment: conditional');
 
   anchorComment.bindings = {
-    conditional: [dom.binding({ get: predFn, thenNode, elseNode })],
+    conditional: [exports.binding({ get: predFn, thenNode, elseNode })],
   };
 
   return anchorComment;
@@ -117,7 +117,7 @@ exports.map = (array, fn) => {
   let anchorComment = exports.comment('anchorComment: map');
 
   anchorComment.bindings = {
-    map: [dom.binding({ get: () => exports.resolve(array), fn })],
+    map: [exports.binding({ get: () => exports.resolve(array), fn })],
   };
 
   return anchorComment;
@@ -204,11 +204,9 @@ exports.mutationObserver = new MutationObserver(muts => {
   }
 });
 
-addEventListener('DOMContentLoaded', () => {
-  exports.mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+exports.mutationObserver.observe(document, {
+  childList: true,
+  subtree: true,
 });
 
 exports.resolve = x => typeof x === 'function' ? x() : x;
@@ -217,7 +215,7 @@ exports.text = fn => {
   let anchorComment = exports.comment('anchorComment: text');
 
   anchorComment.bindings = {
-    text: [dom.binding({ get: fn })],
+    text: [exports.binding({ get: fn })],
   };
 
   return anchorComment;
