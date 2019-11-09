@@ -122,8 +122,6 @@ let TodoApp = () => {
           if (ev.key === 'Enter') {
             state.todos.unshift({ label: state.newItemLabel, isDone: false });
             state.newItemLabel = '';
-
-            dom.update();
           }
         },
       }),
@@ -143,9 +141,7 @@ let TodoApp = () => {
 
             onClick: ev => {
               ev.preventDefault();
-
               state.activeTab = key;
-              dom.update();
             },
           }, [
             dom.text(() => `${label} (${state[arrayKey].length})`),
@@ -162,11 +158,7 @@ let TodoApp = () => {
         }, [
           dom.el('button', {
             class: 'todoListItem-toggle',
-
-            onClick: () => {
-              todo.isDone = !todo.isDone;
-              dom.update();
-            },
+            onClick: () => todo.isDone = !todo.isDone,
           }, [
             dom.text(() => todo.isDone ? 'Undo' : 'Done'),
           ]),
@@ -185,7 +177,6 @@ let TodoApp = () => {
               onKeyUp: ev => {
                 if (ev.key === 'Enter') {
                   todo.isEditing = false;
-                  dom.update();
                 }
               },
             }),
@@ -199,7 +190,6 @@ let TodoApp = () => {
                 }
 
                 todo.isEditing = true;
-                dom.update();
               },
 
               textContent: dom.binding(() => todo.label),
@@ -210,22 +200,14 @@ let TodoApp = () => {
 
       dom.el('button', {
         class: 'todoApp-listClearBtn',
-
-        onClick: () => {
-          state.todos = [];
-          dom.update();
-        },
+        onClick: () => state.todos = [],
       }, [
         'Clear',
       ]),
 
       dom.el('button', {
         class: 'todoApp-listShuffleBtn',
-
-        onClick: () => {
-          shuffle(state.todos);
-          dom.update();
-        },
+        onClick: () => shuffle(state.todos),
       }, [
         'Shuffle',
       ]),
@@ -293,7 +275,11 @@ exports.el = (el, ...args) => {
     }
 
     if (k.startsWith('on')) {
-      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
+      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), ev => {
+        v(ev);
+        exports.update();
+      });
+
       continue;
     }
 

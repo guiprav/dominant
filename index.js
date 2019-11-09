@@ -53,7 +53,11 @@ exports.el = (el, ...args) => {
     }
 
     if (k.startsWith('on')) {
-      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), v);
+      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), ev => {
+        v(ev);
+        exports.update();
+      });
+
       continue;
     }
 
