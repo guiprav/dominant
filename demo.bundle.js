@@ -652,10 +652,13 @@ exports.update.switch = (nAnchor, key, binding) => {
 
       if (matchingCase) {
         let nNew = exports.resolve(matchingCase.then);
+        let nCursor = nAnchor;
 
         for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
-          parentEl.insertBefore(n, nAnchor.nextSibling);
+          parentEl.insertBefore(n, nCursor.nextSibling);
           nAnchor.anchoredNodes.push(n);
+
+          nCursor = n;
         }
       }
     }
