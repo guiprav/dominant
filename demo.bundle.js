@@ -451,6 +451,16 @@ exports.mutationObserver.observe(document, {
 
 exports.resolve = x => typeof x === 'function' ? x() : x;
 
+exports.switch = (fn, cases) => {
+  let anchorComment = exports.comment('anchorComment: switch');
+
+  anchorComment.bindings = {
+    switch: [exports.binding({ get: fn, cases })],
+  };
+
+  return anchorComment;
+};
+
 exports.text = fn => {
   let anchorComment = exports.comment('anchorComment: text');
 
@@ -628,6 +638,44 @@ exports.update.style = (el, propName, binding) => {
   }
 
   binding.lastValues = newValues;
+};
+
+exports.update.switch = (nAnchor, key, binding) => {
+  let newValue = binding.get();
+  let { lastValue } = binding;
+
+  if (lastValue === undefined || newValue !== lastValue) {
+    let parentEl = nAnchor.parentElement;
+
+    if (parentEl) {
+      for (let n of nAnchor.anchoredNodes || []) {
+        n.remove();
+      }
+
+      nAnchor.anchoredNodes = [];
+
+      let cases = exports.resolve(binding.cases);
+
+      if (!Array.isArray(cases)) {
+        cases = Object.entries(cases).map(
+          ([k, v]) => ({ case: k, then: v }),
+        );
+      }
+
+      let matchingCase = cases.find(x => x.case === newValue);
+
+      if (matchingCase) {
+        let nNew = exports.resolve(matchingCase.then);
+
+        for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
+          parentEl.insertBefore(n, nAnchor.nextSibling);
+          nAnchor.anchoredNodes.push(n);
+        }
+      }
+    }
+  }
+
+  binding.lastValue = newValue;
 };
 
 exports.update.text = (n, key, binding) => {
