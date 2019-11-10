@@ -125,10 +125,10 @@ exports.html = html => {
 };
 
 exports.if = (predFn, thenNode, elseNode) => {
-  let anchorComment = exports.comment('anchorComment: conditional');
+  let anchorComment = exports.comment('anchorComment: if');
 
   anchorComment.bindings = {
-    conditional: [exports.binding({ get: predFn, thenNode, elseNode })],
+    if: [exports.binding({ get: predFn, thenNode, elseNode })],
   };
 
   return anchorComment;
@@ -281,6 +281,9 @@ exports.update = (n, key, binding) => {
   updateFn(n, key, binding);
 };
 
+exports.update.attachListeners = () => null;
+exports.update.detachListeners = () => null;
+
 exports.update.class = (el, propName, binding) => {
   let newValues = {};
   let { lastValues = {} } = binding;
@@ -303,7 +306,7 @@ exports.update.class = (el, propName, binding) => {
   binding.lastValues = newValues;
 };
 
-exports.update.conditional = (el, key, binding) => {
+exports.update.if = (el, key, binding) => {
   let newValue = Boolean(binding.get());
   let { lastValue } = binding;
 
@@ -311,24 +314,25 @@ exports.update.conditional = (el, key, binding) => {
     let parentEl = el.parentElement;
 
     if (parentEl) {
-      let nNew = newValue ? binding.thenNode : binding.elseNode;
       let nOld = newValue ? binding.elseNode : binding.thenNode;
-
-      if (nNew) {
-        parentEl.insertBefore(nNew, el.nextSibling);
-      }
+      let nNew = newValue ? binding.thenNode : binding.elseNode;
 
       if (nOld) {
-        nOld.remove();
+        for (let n of Array.isArray(nOld) ? nOld : [nOld]) {
+          n.remove();
+        }
+      }
+
+      if (nNew) {
+        for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
+          parentEl.insertBefore(n, el.nextSibling);
+        }
       }
     }
   }
 
   binding.lastValue = newValue;
 };
-
-exports.update.attachListeners = () => null;
-exports.update.detachListeners = () => null;
 
 exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
