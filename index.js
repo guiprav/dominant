@@ -306,26 +306,26 @@ exports.update.class = (el, propName, binding) => {
   binding.lastValues = newValues;
 };
 
-exports.update.if = (el, key, binding) => {
+exports.update.if = (nAnchor, key, binding) => {
   let newValue = Boolean(binding.get());
   let { lastValue } = binding;
 
   if (lastValue === undefined || newValue !== lastValue) {
-    let parentEl = el.parentElement;
+    let parentEl = nAnchor.parentElement;
 
     if (parentEl) {
-      let nOld = newValue ? binding.elseNode : binding.thenNode;
-      let nNew = newValue ? binding.thenNode : binding.elseNode;
-
-      if (nOld) {
-        for (let n of Array.isArray(nOld) ? nOld : [nOld]) {
-          n.remove();
-        }
+      for (let n of nAnchor.anchoredNodes || []) {
+        n.remove();
       }
+
+      nAnchor.anchoredNodes = [];
+
+      let nNew = newValue ? binding.thenNode : binding.elseNode;
 
       if (nNew) {
         for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
-          parentEl.insertBefore(n, el.nextSibling);
+          parentEl.insertBefore(n, nAnchor.nextSibling);
+          nAnchor.anchoredNodes.push(n);
         }
       }
     }
