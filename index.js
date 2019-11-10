@@ -230,6 +230,14 @@ exports.mutationObserver.observe(document, {
   subtree: true,
 });
 
+exports.remove = n => {
+  for (let nAnchored of n.anchoredNodes || []) {
+    exports.remove(nAnchored);
+  }
+
+  n.remove();
+};
+
 exports.resolve = x => typeof x === 'function' ? x() : x;
 
 exports.switch = (fn, cases) => {
@@ -315,7 +323,7 @@ exports.update.if = (nAnchor, key, binding) => {
 
     if (parentEl) {
       for (let n of nAnchor.anchoredNodes || []) {
-        n.remove();
+        exports.remove(n);
       }
 
       nAnchor.anchoredNodes = [];
@@ -344,8 +352,8 @@ exports.update.map = (anchorComment, key, binding) => {
     return;
   }
 
-  for (let el of lastNodes || []) {
-    el.remove();
+  for (let n of lastNodes || []) {
+    exports.remove(n);
   }
 
   let cursor = anchorComment;
@@ -437,7 +445,7 @@ exports.update.switch = (nAnchor, key, binding) => {
 
     if (parentEl) {
       for (let n of nAnchor.anchoredNodes || []) {
-        n.remove();
+        exports.remove(n);
       }
 
       nAnchor.anchoredNodes = [];
