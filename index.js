@@ -331,9 +331,22 @@ exports.update.if = (nAnchor, key, binding) => {
       let nNew = newValue ? binding.thenNode : binding.elseNode;
 
       if (nNew) {
+        let nCursor = nAnchor;
+
         for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
-          parentEl.insertBefore(n, nAnchor.nextSibling);
+          if (!(n instanceof Node)) {
+            n = document.createTextNode(n);
+          }
+
+          parentEl.insertBefore(n, nCursor.nextSibling);
           nAnchor.anchoredNodes.push(n);
+
+          nCursor = n;
+
+          for (let nAnchored of n.anchoredNodes || []) {
+            parentEl.insertBefore(nAnchored, nCursor.nextSibling);
+            nCursor = nAnchored;
+          }
         }
       }
     }
@@ -352,9 +365,11 @@ exports.update.map = (anchorComment, key, binding) => {
     return;
   }
 
-  for (let n of lastNodes || []) {
+  for (let n of anchorComment.anchoredNodes || []) {
     exports.remove(n);
   }
+
+  anchorComment.anchoredNodes = [];
 
   let cursor = anchorComment;
   let parentEl = anchorComment.parentElement;
@@ -365,10 +380,15 @@ exports.update.map = (anchorComment, key, binding) => {
       case 'new': {
         let nNew = binding.fn(diff.value);
 
+        if (!(nNew instanceof Node)) {
+          nNew = document.createTextNode(nNew);
+        }
+
         parentEl.insertBefore(nNew, cursor.nextSibling);
         cursor = nNew;
 
         updatedNodes.push(nNew);
+        anchorComment.anchoredNodes.push(nNew);
         break;
       }
 
@@ -379,6 +399,7 @@ exports.update.map = (anchorComment, key, binding) => {
         cursor = nExisting;
 
         updatedNodes.push(nExisting);
+        anchorComment.anchoredNodes.push(nExisting);
         break;
       }
     }
@@ -465,6 +486,10 @@ exports.update.switch = (nAnchor, key, binding) => {
         let nCursor = nAnchor;
 
         for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
+          if (!(n instanceof Node)) {
+            n = document.createTextNode(n);
+          }
+
           parentEl.insertBefore(n, nCursor.nextSibling);
           nAnchor.anchoredNodes.push(n);
 
