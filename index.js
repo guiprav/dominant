@@ -53,10 +53,27 @@ exports.el = (el, ...args) => {
     }
 
     if (k.startsWith('on')) {
-      el.addEventListener(k.replace(/^on:?/, '').toLowerCase(), ev => {
-        v(ev);
-        exports.update();
-      });
+      let evName = k.replace(/^on:?/, '').toLowerCase();
+
+      if (['attach', 'detach'].includes(evName)) {
+        let bindingKey = `${evName}Listeners`;
+
+        let elBindings = el.bindings = el.bindings || {};
+        let listenerBindings = elBindings[bindingKey] = elBindings[bindingKey] || [];
+
+        listenerBindings.push(exports.binding({
+          dispatch: (...args) => {
+            v(...args);
+            exports.update();
+          },
+        }));
+      }
+      else {
+        el.addEventListener(evName, ev => {
+          v(ev);
+          exports.update();
+        });
+      }
 
       continue;
     }
@@ -153,12 +170,8 @@ exports.mutationObserver = new MutationObserver(muts => {
   for (let n of detachedBoundNodes) {
     boundNodes.delete(n);
 
-    let { listeners } = n.bindings || {};
-
-    if (listeners) {
-      for (let fn of listeners.detach || []) {
-        fn(n);
-      }
+    for (let binding of n.bindings.detachListeners || []) {
+      binding.dispatch(n);
     }
   }
 
@@ -169,6 +182,10 @@ exports.mutationObserver = new MutationObserver(muts => {
 
     boundNodes.add(n);
     exports.update(n);
+
+    for (let binding of n.bindings.attachListeners || []) {
+      binding.dispatch(n);
+    }
   };
 
   for (let n of addedNodes) {
@@ -309,6 +326,9 @@ exports.update.conditional = (el, key, binding) => {
 
   binding.lastValue = newValue;
 };
+
+exports.update.attachListeners = () => null;
+exports.update.detachListeners = () => null;
 
 exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
