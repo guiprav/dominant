@@ -194,7 +194,7 @@ exports.mutationObserver = new MutationObserver(muts => {
     }
 
     if (n.nodeName === '#comment') {
-      return;
+      continue;
     }
 
     for (
