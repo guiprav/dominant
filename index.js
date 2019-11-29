@@ -1,5 +1,3 @@
-let arrayDiff = require('./arrayDiff');
-
 exports.Binding = class Binding {
   constructor(x) {
     switch (typeof x) {
@@ -359,51 +357,47 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
-  let diffs = arrayDiff(lastArray || [], newArray);
+  let updatedNodes = [...newArray.entries()].map(([i, x]) => {
+    let iPrev = lastArray ? lastArray.indexOf(x) : -1;
 
-  if (!diffs) {
-    return;
+    if (iPrev !== -1) {
+      return lastNodes[iPrev];
+    }
+    else {
+      let n = binding.fn(x);
+
+      if (!(n instanceof Node)) {
+        return document.createTextNode(n);
+      }
+
+      return n;
+    }
+  });
+
+  let removedItems = lastArray
+    ? [...lastArray.entries()].filter(([i, x]) => !newArray.includes(x))
+    : [];
+
+  for (let [i] of removedItems) {
+    lastNodes[i].remove();
   }
-
-  for (let n of anchorComment.anchoredNodes || []) {
-    exports.remove(n);
-  }
-
-  anchorComment.anchoredNodes = [];
 
   let cursor = anchorComment;
   let parentEl = anchorComment.parentElement;
-  let updatedNodes = [];
 
-  for (let diff of diffs) {
-    switch (diff.type) {
-      case 'new': {
-        let nNew = binding.fn(diff.value);
+  for (let [i, n] of updatedNodes.entries()) {
+    let nextCursorSibling = cursor.nextSibling;
 
-        if (!(nNew instanceof Node)) {
-          nNew = document.createTextNode(nNew);
-        }
-
-        parentEl.insertBefore(nNew, cursor.nextSibling);
-        cursor = nNew;
-
-        updatedNodes.push(nNew);
-        anchorComment.anchoredNodes.push(nNew);
-        break;
-      }
-
-      case 'existing': {
-        let nExisting = lastNodes[diff.from];
-
-        parentEl.insertBefore(nExisting, cursor.nextSibling);
-        cursor = nExisting;
-
-        updatedNodes.push(nExisting);
-        anchorComment.anchoredNodes.push(nExisting);
-        break;
-      }
+    if (n === nextCursorSibling) {
+      cursor = nextCursorSibling;
+    }
+    else {
+      parentEl.insertBefore(n, nextCursorSibling);
+      cursor = n;
     }
   }
+
+  anchorComment.anchoredNodes = [...updatedNodes];
 
   binding.lastArray = newArray;
   binding.lastNodes = updatedNodes;

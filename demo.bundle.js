@@ -1,71 +1,4 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-module.exports = (a, b) => {
-  let diffs = {
-    moved: [],
-    added: [],
-    removed: [],
-  };
-
-  for (let [i, x] of a.entries()) {
-    if (b[i] === x) {
-      continue;
-    }
-
-    let newIndex = b.findIndex((y, j) => {
-      if (y !== x) {
-        return false;
-      }
-
-      return !diffs.moved.some(
-        z => z.value === y && z.to !== j,
-      );
-    });
-
-    if (newIndex === -1) {
-      diffs.removed.push({ from: i });
-      continue;
-    }
-
-    diffs.moved.push({
-      value: x,
-      from: i,
-      to: newIndex,
-    });
-  }
-
-  for (let [i, x] of b.entries()) {
-    if (a[i] === x) {
-      continue;
-    }
-
-    if (diffs.moved.some(y => y.value == x && y.to === i)) {
-      continue;
-    }
-
-    diffs.added.push({
-      value: x,
-      to: i,
-    });
-  }
-  
-  if (Object.values(diffs).every(x => x.length === 0)) {
-    return null;
-  }
-
-  return b.map((x, i) => {
-    if (a[i] === x) {
-      return { type: 'existing', from: i };
-    }
-
-    let moved = diffs.moved.find(y => y.to === i);
-
-    return moved
-      ? { type: 'existing', from: moved.from }
-      : { type: 'new', value: x };
-  });
-};
-
-},{}],2:[function(require,module,exports){
 window.dom = require('.');
 
 window.shuffle = xs => {
@@ -219,9 +152,7 @@ addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(window.todoApp = TodoApp());
 });
 
-},{".":3}],3:[function(require,module,exports){
-let arrayDiff = require('./arrayDiff');
-
+},{".":2}],2:[function(require,module,exports){
 exports.Binding = class Binding {
   constructor(x) {
     switch (typeof x) {
@@ -581,51 +512,47 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
-  let diffs = arrayDiff(lastArray || [], newArray);
+  let updatedNodes = [...newArray.entries()].map(([i, x]) => {
+    let iPrev = lastArray ? lastArray.indexOf(x) : -1;
 
-  if (!diffs) {
-    return;
+    if (iPrev !== -1) {
+      return lastNodes[iPrev];
+    }
+    else {
+      let n = binding.fn(x);
+
+      if (!(n instanceof Node)) {
+        return document.createTextNode(n);
+      }
+
+      return n;
+    }
+  });
+
+  let removedItems = lastArray
+    ? [...lastArray.entries()].filter(([i, x]) => !newArray.includes(x))
+    : [];
+
+  for (let [i] of removedItems) {
+    lastNodes[i].remove();
   }
-
-  for (let n of anchorComment.anchoredNodes || []) {
-    exports.remove(n);
-  }
-
-  anchorComment.anchoredNodes = [];
 
   let cursor = anchorComment;
   let parentEl = anchorComment.parentElement;
-  let updatedNodes = [];
 
-  for (let diff of diffs) {
-    switch (diff.type) {
-      case 'new': {
-        let nNew = binding.fn(diff.value);
+  for (let [i, n] of updatedNodes.entries()) {
+    let nextCursorSibling = cursor.nextSibling;
 
-        if (!(nNew instanceof Node)) {
-          nNew = document.createTextNode(nNew);
-        }
-
-        parentEl.insertBefore(nNew, cursor.nextSibling);
-        cursor = nNew;
-
-        updatedNodes.push(nNew);
-        anchorComment.anchoredNodes.push(nNew);
-        break;
-      }
-
-      case 'existing': {
-        let nExisting = lastNodes[diff.from];
-
-        parentEl.insertBefore(nExisting, cursor.nextSibling);
-        cursor = nExisting;
-
-        updatedNodes.push(nExisting);
-        anchorComment.anchoredNodes.push(nExisting);
-        break;
-      }
+    if (n === nextCursorSibling) {
+      cursor = nextCursorSibling;
+    }
+    else {
+      parentEl.insertBefore(n, nextCursorSibling);
+      cursor = n;
     }
   }
+
+  anchorComment.anchoredNodes = [...updatedNodes];
 
   binding.lastArray = newArray;
   binding.lastNodes = updatedNodes;
@@ -769,4 +696,4 @@ exports.update.value = (el, propName, binding) => {
   }
 };
 
-},{"./arrayDiff":1}]},{},[2]);
+},{}]},{},[1]);
