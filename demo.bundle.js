@@ -301,8 +301,6 @@ exports.mutationObserver = new MutationObserver(muts => {
   let { body } = document;
   let { boundNodes } = exports;
 
-  let boundNodesArray = [...boundNodes];
-
   let addedNodes = muts.map(x => [...x.addedNodes]).flat();
 
   let removedNodes = muts.map(x => [...x.removedNodes]).flat().filter(
@@ -316,8 +314,15 @@ exports.mutationObserver = new MutationObserver(muts => {
       detachedBoundNodes.push(n);
     }
 
-    let detachedBoundChildNodes = boundNodesArray.filter(x => n.contains(x));
-    detachedBoundNodes.push(...detachedBoundChildNodes);
+    let walker = document.createTreeWalker(
+      n,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
+      { acceptNode: n2 => n2.bindings ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP },
+    );
+
+    while (walker.nextNode()) {
+      detachedBoundNodes.push(walker.currentNode);
+    }
   }
 
   for (let n of detachedBoundNodes) {
@@ -342,38 +347,14 @@ exports.mutationObserver = new MutationObserver(muts => {
   };
 
   for (let n of addedNodes) {
-    if (n.bindings) {
-      attachNode(n);
-    }
+    let walker = document.createTreeWalker(
+      n,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
+      { acceptNode: n2 => n2.bindings ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP },
+    );
 
-    if (n.nodeName === '#comment') {
-      continue;
-    }
-
-    for (
-      let childComment of
-      [...n.childNodes].filter(x => x.nodeName === '#comment')
-    ) {
-      if (childComment.bindings) {
-        attachNode(childComment);
-      }
-    }
-
-    if (n.querySelectorAll) {
-      for (let el of n.querySelectorAll('*')) {
-        if (el.bindings) {
-          attachNode(el);
-        }
-
-        for (
-          let childComment of
-          [...el.childNodes].filter(x => x.nodeName === '#comment')
-        ) {
-          if (childComment.bindings) {
-            attachNode(childComment);
-          }
-        }
-      }
+    while (walker.nextNode()) {
+      attachNode(walker.currentNode);
     }
   }
 });
@@ -512,13 +493,21 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
+  let dirtyAttached = false;
+
   let updatedNodes = [...newArray.entries()].map(([i, x]) => {
     let iPrev = lastArray ? lastArray.indexOf(x) : -1;
 
     if (iPrev !== -1) {
+      if (iPrev !== i) {
+        dirtyAttached = true;
+      }
+
       return lastNodes[iPrev];
     }
     else {
+      dirtyAttached = true;
+
       let n = binding.fn(x);
 
       if (!(n instanceof Node)) {
@@ -537,19 +526,11 @@ exports.update.map = (anchorComment, key, binding) => {
     lastNodes[i].remove();
   }
 
-  let cursor = anchorComment;
-  let parentEl = anchorComment.parentElement;
+  if (dirtyAttached) {
+    let frag = document.createDocumentFragment();
 
-  for (let [i, n] of updatedNodes.entries()) {
-    let nextCursorSibling = cursor.nextSibling;
-
-    if (n === nextCursorSibling) {
-      cursor = nextCursorSibling;
-    }
-    else {
-      parentEl.insertBefore(n, nextCursorSibling);
-      cursor = n;
-    }
+    frag.append(...updatedNodes);
+    anchorComment.parentElement.insertBefore(frag, anchorComment.nextSibling);
   }
 
   anchorComment.anchoredNodes = [...updatedNodes];
