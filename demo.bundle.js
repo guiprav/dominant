@@ -316,7 +316,7 @@ exports.mutationObserver = new MutationObserver(muts => {
 
     let walker = document.createTreeWalker(
       n,
-      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
     );
 
     while (walker.nextNode()) {
@@ -349,7 +349,7 @@ exports.mutationObserver = new MutationObserver(muts => {
   for (let n of addedNodes) {
     let walker = document.createTreeWalker(
       n,
-      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
     );
 
     while (walker.nextNode()) {
