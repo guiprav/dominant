@@ -162,11 +162,11 @@ exports.mutationObserver = new MutationObserver(muts => {
     let walker = document.createTreeWalker(
       n,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
-      { acceptNode: n2 => n2.bindings ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP },
     );
 
     while (walker.nextNode()) {
-      detachedBoundNodes.push(walker.currentNode);
+      let n2 = walker.currentNode;
+      n2.bindings && detachedBoundNodes.push(n2);
     }
   }
 
@@ -195,11 +195,11 @@ exports.mutationObserver = new MutationObserver(muts => {
     let walker = document.createTreeWalker(
       n,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
-      { acceptNode: n2 => n2.bindings ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP },
     );
 
     while (walker.nextNode()) {
-      attachNode(walker.currentNode);
+      let n2 = walker.currentNode;
+      n2.bindings && attachNode(n2);
     }
   }
 });
