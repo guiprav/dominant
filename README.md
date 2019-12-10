@@ -21,8 +21,6 @@ I don't care much about benchmarks, so long as my apps are always snappy, never 
 
 These are this library's design principles. I thought about them by applying first principles thinking to figure out the minimum set of features a JavaScript UI library needs to provide to enable sane, comfortable development of modern web apps.
 
-And yes, I know what the project logo means.
-
 ## Setup
 
 Install Dominant:
