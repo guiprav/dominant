@@ -338,44 +338,36 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
-  let dirtyAttached = false;
+  let parentEl = anchorComment.parentElement;
+  let tail = lastNodes && lastNodes.length ? lastNodes[lastNodes.length - 1].nextSibling : anchorComment.nextSibling;
 
-  let updatedNodes = [...newArray.entries()].map(([i, x]) => {
-    let iPrev = lastArray ? lastArray.indexOf(x) : -1;
+  let updatedNodes = [];
 
-    if (iPrev !== -1) {
-      if (iPrev !== i) {
-        dirtyAttached = true;
-      }
+  for (let i = 0; i < newArray.length; ++i) {
+    let x = newArray[i];
+    let lastNode = lastNodes[i];
 
-      return lastNodes[iPrev];
+    if (lastArray && lastArray[i] === x) {
+      updatedNodes.push(lastNode);
+      continue;
     }
-    else {
-      dirtyAttached = true;
 
-      let n = binding.fn(x);
+    let iPrev = lastArray.indexOf(x, i);
+    let n = lastNodes[iPrev];
+
+    if (!n) {
+      n = binding.fn(x);
 
       if (!(n instanceof Node)) {
-        return document.createTextNode(n);
+        n = document.createTextNode(n);
       }
-
-      return n;
     }
-  });
 
-  let removedItems = lastArray
-    ? [...lastArray.entries()].filter(([i, x]) => !newArray.includes(x))
-    : [];
+    if (n !== lastNode) {
+      parentEl.insertBefore(n, lastNode || tail);
+    }
 
-  for (let [i] of removedItems) {
-    lastNodes[i].remove();
-  }
-
-  if (dirtyAttached) {
-    let frag = document.createDocumentFragment();
-
-    frag.append(...updatedNodes);
-    anchorComment.parentElement.insertBefore(frag, anchorComment.nextSibling);
+    updatedNodes.push(n);
   }
 
   anchorComment.anchoredNodes = [...updatedNodes];
