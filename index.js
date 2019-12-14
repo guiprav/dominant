@@ -385,7 +385,7 @@ exports.update.map = (anchorComment, key, binding) => {
 
     if (iNew === undefined) {
       n.remove();
-      updatedNodes.splice(iLast, 1);
+      updatedNodes = updatedNodes.filter(n2 => n2 !== n);
 
       continue;
     }
