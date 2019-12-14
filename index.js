@@ -338,22 +338,37 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
-  let parentEl = anchorComment.parentElement;
-  let tail = lastNodes && lastNodes.length ? lastNodes[lastNodes.length - 1].nextSibling : anchorComment.nextSibling;
+  lastArray = lastArray || [];
+  lastNodes = lastNodes || [];
 
-  let updatedNodes = [];
+  let valueMap = new Map();
 
-  for (let i = 0; i < newArray.length; ++i) {
-    let x = newArray[i];
-    let lastNode = lastNodes[i];
+  for (let i = 0; i < Math.max(lastArray.length, newArray.length); ++i) {
+    let xLast = lastArray[i];
+    let xNew = newArray[i];
 
-    if (lastArray && lastArray[i] === x) {
-      updatedNodes.push(lastNode);
+    if (xLast === xNew) {
+      valueMap.set(xLast, { iLast: i, iNew: i, n: lastNodes[i] });
       continue;
     }
 
-    let iPrev = lastArray.indexOf(x, i);
-    let n = lastNodes[iPrev];
+    if (i < lastArray.length) {
+      let metaLast = valueMap.get(xLast) || {};
+      valueMap.set(xLast, { ...metaLast, iLast: i, n: lastNodes[i] });
+    }
+
+    if (i < newArray.length) {
+      let metaNew = valueMap.get(xNew) || {};
+      valueMap.set(xNew, { ...metaNew, iNew: i });
+    }
+  }
+
+  let parentEl = anchorComment.parentElement;
+  let tail = lastNodes.length ? lastNodes[lastNodes.length - 1].nextSibling : anchorComment.nextSibling;
+  let updatedNodes = [...lastNodes];
+
+  for (let [x, { iNew, iLast, n }] of valueMap) {
+    let nextSibling = updatedNodes[iNew] || tail;
 
     if (!n) {
       n = binding.fn(x);
@@ -361,13 +376,29 @@ exports.update.map = (anchorComment, key, binding) => {
       if (!(n instanceof Node)) {
         n = document.createTextNode(n);
       }
+
+      parentEl.insertBefore(n, nextSibling);
+      updatedNodes.splice(iNew, 0, n);
+
+      continue;
     }
 
-    if (n !== lastNode) {
-      parentEl.insertBefore(n, lastNode || tail);
+    if (iNew === undefined) {
+      n.remove();
+      updatedNodes.splice(iLast, 1);
+
+      continue;
     }
 
-    updatedNodes.push(n);
+    if (iLast !== iNew && n !== nextSibling) {
+      parentEl.insertBefore(n, nextSibling);
+
+      updatedNodes = [];
+
+      for (let n2 = anchorComment.nextSibling; n2 !== tail; n2 = n2.nextSibling) {
+        updatedNodes.push(n2);
+      }
+    }
   }
 
   anchorComment.anchoredNodes = [...updatedNodes];

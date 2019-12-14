@@ -493,44 +493,67 @@ exports.update.map = (anchorComment, key, binding) => {
   let newArray = [...binding.get() || []];
   let { lastArray, lastNodes } = binding;
 
-  let dirtyAttached = false;
+  lastArray = lastArray || [];
+  lastNodes = lastNodes || [];
 
-  let updatedNodes = [...newArray.entries()].map(([i, x]) => {
-    let iPrev = lastArray ? lastArray.indexOf(x) : -1;
+  let valueMap = new Map();
 
-    if (iPrev !== -1) {
-      if (iPrev !== i) {
-        dirtyAttached = true;
-      }
+  for (let i = 0; i < Math.max(lastArray.length, newArray.length); ++i) {
+    let xLast = lastArray[i];
+    let xNew = newArray[i];
 
-      return lastNodes[iPrev];
+    if (xLast === xNew) {
+      valueMap.set(xLast, { iLast: i, iNew: i, n: lastNodes[i] });
+      continue;
     }
-    else {
-      dirtyAttached = true;
 
-      let n = binding.fn(x);
-
-      if (!(n instanceof Node)) {
-        return document.createTextNode(n);
-      }
-
-      return n;
+    if (i < lastArray.length) {
+      let metaLast = valueMap.get(xLast) || {};
+      valueMap.set(xLast, { ...metaLast, iLast: i, n: lastNodes[i] });
     }
-  });
 
-  let removedItems = lastArray
-    ? [...lastArray.entries()].filter(([i, x]) => !newArray.includes(x))
-    : [];
-
-  for (let [i] of removedItems) {
-    lastNodes[i].remove();
+    if (i < newArray.length) {
+      let metaNew = valueMap.get(xNew) || {};
+      valueMap.set(xNew, { ...metaNew, iNew: i });
+    }
   }
 
-  if (dirtyAttached) {
-    let frag = document.createDocumentFragment();
+  let parentEl = anchorComment.parentElement;
+  let tail = lastNodes.length ? lastNodes[lastNodes.length - 1].nextSibling : anchorComment.nextSibling;
+  let updatedNodes = [...lastNodes];
 
-    frag.append(...updatedNodes);
-    anchorComment.parentElement.insertBefore(frag, anchorComment.nextSibling);
+  for (let [x, { iNew, iLast, n }] of valueMap) {
+    let nextSibling = updatedNodes[iNew] || tail;
+
+    if (!n) {
+      n = binding.fn(x);
+
+      if (!(n instanceof Node)) {
+        n = document.createTextNode(n);
+      }
+
+      parentEl.insertBefore(n, nextSibling);
+      updatedNodes.splice(iNew, 0, n);
+
+      continue;
+    }
+
+    if (iNew === undefined) {
+      n.remove();
+      updatedNodes.splice(iLast, 1);
+
+      continue;
+    }
+
+    if (iLast !== iNew && n !== nextSibling) {
+      parentEl.insertBefore(n, nextSibling);
+
+      updatedNodes = [];
+
+      for (let n2 = anchorComment.nextSibling; n2 !== tail; n2 = n2.nextSibling) {
+        updatedNodes.push(n2);
+      }
+    }
   }
 
   anchorComment.anchoredNodes = [...updatedNodes];
