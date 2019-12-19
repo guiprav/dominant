@@ -2,7 +2,7 @@
   "name": "dominant",
   "version": "0.0.0",
   "author": "Gui Prá (super.driver.512@gmail.com)",
-  "license": "AGPL-3.0+",
+  "license": "MIT",
   "scripts": {
     "build": "browserify demo.js -o demo.bundle.js"
   },
