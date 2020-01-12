@@ -302,7 +302,7 @@ exports.update.class = (el, propName, binding) => {
 };
 
 exports.update.if = (nAnchor, key, binding) => {
-  let newValue = Boolean(binding.get());
+  let newValue = Boolean(exports.resolve(binding.get));
   let { lastValue } = binding;
 
   if (lastValue === undefined || newValue !== lastValue) {
