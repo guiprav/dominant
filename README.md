@@ -231,6 +231,40 @@ setInterval(() => {
 }, 1000);
 ```
 
+### dom.map(array, mapFn)
+
+The `array.map(fn)` analog to `dom.if`.
+
+When updated, the binding resolves `array`, removes nodes associated to removed array values, reorders nodes to match the order of associated values in the new array, maps new values to new nodes using `mapFn`, and adds them to the DOM.
+
+```js
+let fruits = [
+  { name: 'Apple', color: 'Red' },
+  { name: 'Grape', color: 'Purple' },
+  { name: 'Lemon', color: 'Green' },
+];
+
+let wikipediaPagePrefix = 'https://en.wikipedia.org/wiki';
+
+document.body.append(dom.map(
+  () => fruits, fruit => dom.el('li', [
+    'The ',
+
+    dom.el('a', { href: () => `${wikipediaPagePrefix}/${fruit.name}` }, [
+      dom.text(() => fruit.name),
+    ]),
+
+    ' is ',
+
+    dom.el('a', { href: () => `${wikipediaPagePrefix}/${fruit.color}` }, [
+      dom.text(() => fruit.color),
+    ]),
+
+    '.',
+  ]),
+));
+```
+
 ## License
 
 <img src="https://duckduckgo.com/i/07eb45d6.png" height="40" /><br />
