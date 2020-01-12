@@ -210,17 +210,15 @@ setTimeout(() => {
 The `switch` analog to `dom.if`.
 
 ```js
-let cases = {
+let keys = ['harder', 'better', 'faster', 'stronger'];
+let i = 0;
+
+document.body.append(dom.switch(() => keys[i], {
   harder: dom.el('div', ['HARDER']),
   better: dom.el('div', ['BETTER']),
   faster: dom.el('div', ['FASTER']),
   stronger: dom.el('div', ['STRONGER']),
-};
-
-let keys = ['harder', 'better', 'faster', 'stronger'];
-let i = 0;
-
-document.body.append(dom.switch(() => keys[i], cases));
+}));
 
 setInterval(() => {
   if (++i >= 4) {
