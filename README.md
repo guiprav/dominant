@@ -229,11 +229,11 @@ setInterval(() => {
 }, 1000);
 ```
 
-### dom.map(array, mapFn)
+### dom.map(array, fn)
 
 The `array.map(fn)` analog to `dom.if`.
 
-When updated, the binding resolves `array`, removes nodes associated to removed array values, reorders nodes to match the order of associated values in the new array, maps new values to new nodes using `mapFn`, and adds them to the DOM.
+When updated, the binding resolves `array`, removes nodes associated to removed array values, reorders nodes to match the order of associated values in the new array, maps new values to new nodes using `fn`, and adds them to the DOM.
 
 ```js
 let fruits = [
