@@ -186,7 +186,7 @@ document.body.append(dom.text(() => `Hello, ${whom}!`));
 
 Returns a conditional anchor comment node (`<!-- anchorComment: if -->`) that represents a conditional node attachment in the document.
 
-When updated, the binding resolves `pred` and adds `thenNode` as its next sibling or `elseNode` otherwise.
+When updated, the binding resolves `pred` and adds `thenNode` as its next sibling if the result is truthy, `elseNode` otherwise.
 
 Note: Nodes, including anchor comment nodes, are automatically updated when attached to the document (`dom.mutationObserver` does this).
 
