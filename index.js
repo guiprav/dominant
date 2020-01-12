@@ -42,6 +42,12 @@ exports.el = (el, ...args) => {
   }
 
   for (let [k, v] of Object.entries(props || {})) {
+    let isEventListenerKey = k.startsWith('on');
+
+    if (!isEventListenerKey && v instanceof Function) {
+      v = new exports.Binding(v);
+    }
+
     if (v instanceof exports.Binding) {
       let elBindings = el.bindings = el.bindings || {};
       let propBindings = elBindings[k] = elBindings[k] || [];
@@ -50,7 +56,7 @@ exports.el = (el, ...args) => {
       continue;
     }
 
-    if (k.startsWith('on')) {
+    if (isEventListenerKey) {
       let evName = k.replace(/^on:?/, '').toLowerCase();
 
       if (['attach', 'detach'].includes(evName)) {
@@ -192,6 +198,8 @@ exports.mutationObserver = new MutationObserver(muts => {
   };
 
   for (let n of addedNodes) {
+    n.bindings && attachNode(n);
+
     let walker = document.createTreeWalker(
       n,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,

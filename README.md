@@ -182,6 +182,55 @@ setTimeout(() => {
 document.body.append(dom.text(() => `Hello, ${whom}!`));
 ```
 
+### dom.if(pred, thenNode, elseNode)
+
+Returns a conditional anchor comment node (`<!-- anchorComment: if -->`) that represents a conditional node attachment in the document.
+
+When updated, the binding resolves `pred` and adds `thenNode` as its next sibling or `elseNode` otherwise.
+
+Note: Nodes, including anchor comment nodes, are automatically updated when attached to the document (`dom.mutationObserver` does this).
+
+```js
+let isNewVisitor = true;
+
+document.body.append(dom.if(
+  () => isNewVisitor,
+  dom.el('div', ['Nice to meet you!']),
+  dom.el('div', ['Welcome back!']),
+));
+
+setTimeout(() => {
+  isNewVisitor = false;
+  dom.update();
+}, 1000);
+```
+
+### dom.switch(value, cases)
+
+The `switch` analog to `dom.if`.
+
+```js
+let cases = {
+  harder: dom.el('div', ['HARDER']),
+  better: dom.el('div', ['BETTER']),
+  faster: dom.el('div', ['FASTER']),
+  stronger: dom.el('div', ['STRONGER']),
+};
+
+let keys = ['harder', 'better', 'faster', 'stronger'];
+let i = 0;
+
+document.body.append(dom.switch(() => keys[i], cases));
+
+setInterval(() => {
+  if (++i >= 4) {
+    i = 0;
+  }
+
+  dom.update();
+}, 1000);
+```
+
 ## License
 
 <img src="https://duckduckgo.com/i/07eb45d6.png" height="40" /><br />
