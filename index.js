@@ -15,6 +15,12 @@ exports.Binding = class Binding {
   }
 };
 
+exports.Component = class Component {
+  constructor(props) {
+    this.props = props;
+  }
+};
+
 exports.binding = (...args) => new exports.Binding(...args);
 
 exports.boundNodes = new Set();
@@ -22,11 +28,20 @@ exports.boundNodes = new Set();
 exports.comment = text => document.createComment(` ${text || 'comment'} `);
 
 exports.el = (el, ...args) => {
-  let props;
+  let props = {};
 
   if (args[0] && args[0].constructor === Object) {
     props = args.shift();
   }
+
+  if (args.length === 1 && Array.isArray(args[0])) {
+    props.children = args.shift();
+  }
+  else {
+    props.children = args;
+  }
+
+  let { children } = props;
 
   switch (typeof el) {
     case 'string':
@@ -34,14 +49,17 @@ exports.el = (el, ...args) => {
       break;
 
     case 'function':
-      el = el();
-      break;
+      return new el(props).render();
 
     default:
       break;
   }
 
   for (let [k, v] of Object.entries(props || {})) {
+    if (k === 'children') {
+      continue;
+    }
+
     let isEventListenerKey = k.startsWith('on');
 
     if (!isEventListenerKey && v instanceof Function) {
@@ -98,9 +116,9 @@ exports.el = (el, ...args) => {
     el[k] = v;
   }
 
-  if (args.length) {
+  if (children.length) {
     el.innerHTML = '';
-    el.append(...args.flat(10));
+    el.append(...children.flat(10));
   }
 
   if (el.bindings && document.body.contains(el)) {
