@@ -1,4 +1,4 @@
-# <img src="logo.svg" alt="Dominant logo" height="40" align="top"> Dominant – First principles JavaScript UI library
+# <img src="logo.svg" alt="Dominant logo" height="40" align="top"> Dominant – Dysfunctional JavaScript UI library
 
 I'm too old and tired for [React](http://reactjs.org) and its awful ecosystem getting in my way almost every single day at work.
 
@@ -19,7 +19,7 @@ It should let me leverage DOM APIs, not abstract them away.
 
 I don't care much about benchmarks, so long as my apps are always snappy, never slow.
 
-These are this library's design principles. I thought about them by applying first principles thinking to figure out the minimum set of features a JavaScript UI library needs to provide to enable sane, comfortable development of modern web apps.
+These are this library's design principles. I thought about them by applying first principles thinking to come up with a minimum set of features a JavaScript UI library needs to enable sane, comfortable development of modern web apps.
 
 ## Setup
 
