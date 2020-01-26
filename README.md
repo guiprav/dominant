@@ -13,7 +13,8 @@ I can call an update function whenever state changes (à la [Mithril](https://mi
 It should let me leverage DOM APIs, not abstract them away.
 
   * This means no virtual DOM.
-  * It also means there's no **mount** function; components are just functions that return DOM nodes you can compose using a familiar [Hyperscript](https://github.com/hyperhype/hyperscript)-like API and append wherever.
+  * It also means there's no **mount** function; components are just functions or Component classes with render functions that return DOM nodes you can compose using a familiar [Hyperscript](https://github.com/hyperhype/hyperscript)-like API and append wherever.
+  * JSX is not currently supported nor recommended, but should be easily implementable. It just doesn't pass my utility/complexity threshold.
   * A DOM [mutation observer](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) keeps track of which DOM nodes with bindings are attached to the document and calls lifecycle listeners (**attach**/**detach**, if any).
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
 
