@@ -82,13 +82,25 @@ And open up your app in a browser.
 
 ## API
 
-### dom.el(tagNameOrExistingElement, { props }, [children])
+### dom.el(tagName | el | fn | Component, { props }, [children])
 
-Creates a DOM element of the specified tag name or sets props/children on an existing element.
+Creates a DOM element of the specified tag name (`tagName`), function (`fn`),
+or class (`Component`), or sets props/children on an existing element (`el`).
 
-Key/values in the **props** object (if supplied) can be used to set an element's attributes, properties, bindings, and event listeners.
+When a tag name or existing element is supplied, key/values in the (optional)
+**props** object can be used to set an element's attributes, properties,
+bindings, and event listeners.
 
-Any supplied child nodes are also appended to the element.
+Also any **children** (optional) are appended to the created element.
+
+When a component function or Component class are supplied, any  **children**
+supplied are stored in `props.children` before **props** is forwarded to the
+component function or constructor.
+
+When a component function is supplied, the return value of `fn(props)` is returned.
+
+When a Component class is supplied, the return value of
+`new Component(props).render()` is returned.
 
 ```js
 document.body.append(
@@ -136,9 +148,68 @@ document.body.append(
     }),
   }),
 );
+
+// Component function:
+const HelloFn = ({ whom }) => dom.text(() => `Hello, ${dom.resolve(whom)}!`);
+document.body.append(dom.el(HelloFn, { whom: 'functions' }));
+
+// Component class (with dom.resolving property getter `this.whom`):
+class HelloClass extends dom.Component {
+  constructor(props) {
+    super();
+    this.props = props;
+  }
+
+  // This getter calls `dom.resolve(this.props.whom)` internally so you don't have
+  // to do that every time you want `this.props.whom`'s resolved value. See
+  // `dom.resolve(x)`'s documentation below.
+  get whom() {
+    return dom.resolve(this.props.whom);
+  }
+
+  render = () => dom.text(() => `Hello, ${this.whom}!`);
+}
+
+document.body.append(dom.el(HelloClass, { whom: 'classes' }));
 ```
 
-**Note:** Dominant has no way of knowing when your application's state changes. It's up to you to call **dom.update()** after any (potential) state changes.
+**Note:** Dominant has no way of knowing when your application's state changes.
+It's up to you to call **dom.update()** after any (potential) state changes.
+
+### dom.resolve(x)
+
+This helper function will call **x** if it's a function, or just return **x**
+itself otherwise. That is:
+
+```js
+dom.resolve(() => 123); // returns 123.
+dom.resolve(123); // also returns 123.
+```
+
+This is useful when you're writing a component which may receive a regular
+value as prop or a getter function that works as a live reference to some
+expression in the calling scope. E.g.:
+
+
+```js
+let name = 'John Doe';
+
+// Since we're passing `name` here directly, we're actually passing `name`'s
+current value as a constant.
+document.body.append(HelloFn({ whom: name }));
+
+// I.e., this has no effect:
+name = 'Jane Doe';
+dom.update();
+
+// If we pass a getter function, on the other hand, HelloFn can call it anytime
+// to get the most up-to-date value:
+document.body.append(HelloFn({ whom: () => name }));
+
+// So this causes the UI to update accordingly:
+name = 'Foo Bar';
+dom.update();
+```
 
 ### dom.update()
 
