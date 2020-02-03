@@ -148,5 +148,5 @@ let TodoApp = () => {
 };
 
 addEventListener('DOMContentLoaded', () => {
-  document.body.appendChild(window.todoApp = TodoApp());
+  document.body.appendChild(window.todoApp = dom.el(TodoApp));
 });

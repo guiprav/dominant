@@ -149,7 +149,7 @@ let TodoApp = () => {
 };
 
 addEventListener('DOMContentLoaded', () => {
-  document.body.appendChild(window.todoApp = TodoApp());
+  document.body.appendChild(window.todoApp = dom.el(TodoApp));
 });
 
 },{".":2}],2:[function(require,module,exports){
@@ -171,8 +171,8 @@ exports.Binding = class Binding {
 };
 
 exports.Component = class Component {
-  constructor(props) {
-    this.props = props;
+  render() {
+    throw new Error(`${this.constructor.name} does not implement render`);
   }
 };
 
@@ -204,7 +204,11 @@ exports.el = (el, ...args) => {
       break;
 
     case 'function':
-      return new el(props).render();
+      if (el.prototype instanceof exports.Component) {
+        return new el(props).render();
+      }
+
+      return el(props);
 
     default:
       break;
