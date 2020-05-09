@@ -126,11 +126,11 @@ document.body.append(
 
   // Dynamic class and style props example (one-way bindings):
   dom.el('div', {
-    class: () => ({
-      foo: true,
-      bar: isThirsty,
-      baz: true,
-    }),
+    class: () => [
+      'foo',
+      isThirsy && 'bar',
+      'baz',
+    ],
 
     style: () => ({
       width: '40px',

@@ -457,21 +457,22 @@ exports.update.attachListeners = () => null;
 exports.update.detachListeners = () => null;
 
 exports.update.class = (el, propName, binding) => {
-  let newValues = {};
-  let { lastValues = {} } = binding;
+  let newValues = binding.get();
+  let { lastValues = [] } = binding;
 
-  for (let [k, v] of Object.entries(binding.get())) {
-    newValues[k] = Boolean(v);
+  if (typeof newValues === 'string') {
+    newValues = newValues.split(/ |\r|\n/).filter(Boolean);
   }
 
-  for (let k of new Set([
-    ...Object.keys(lastValues),
-    ...Object.keys(newValues),
-  ])) {
-    let v = newValues[k];
+  for (let x of lastValues) {
+    if (!newValues.includes(x)) {
+      el.classList.remove(x);
+    }
+  }
 
-    if (v !== lastValues[k]) {
-      el.classList.toggle(k, v);
+  for (let x of newValues) {
+    if (!lastValues.includes(x)) {
+      el.classList.add(x);
     }
   }
 
