@@ -306,8 +306,12 @@ exports.update.class = (el, propName, binding) => {
   let { lastValues = [] } = binding;
 
   if (typeof newValues === 'string') {
-    newValues = newValues.split(/ |\r|\n/).filter(Boolean);
+    newValues = [newValues];
   }
+
+  newValues = newValues
+    .flatMap(x => x && String(x).split(/ |\r|\n/))
+    .filter(Boolean);
 
   for (let x of lastValues) {
     if (!newValues.includes(x)) {
