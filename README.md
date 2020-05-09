@@ -188,14 +188,14 @@ dom.resolve(123); // also returns 123.
 
 This is useful when you're writing a component which may receive a regular
 value as prop or a getter function that works as a live reference to some
-expression in the calling scope. E.g.:
+expression in the getter function's scope. E.g.:
 
 
 ```js
 let name = 'John Doe';
 
 // Since we're passing `name` here directly, we're actually passing `name`'s
-current value as a constant.
+// current value as a constant.
 document.body.append(HelloFn({ whom: name }));
 
 // I.e., this has no effect:
