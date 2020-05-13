@@ -1,6 +1,6 @@
 # <img src="logo.svg" alt="Dominant logo" height="40" align="top"> Dominant – Dysfunctional JavaScript UI library
 
-I'm too old and tired for [React](http://reactjs.org) and its awful ecosystem getting in my way almost every single day at work.
+[React](http://reactjs.org) has been truly revolutionary back in the day, and it's taught us many important lessons, but I think it's about time we move on, and I'm not excited about any of the existing alternatives as they're all similarly complex.
 
 I need a UI library that allows me to create components bound to mutable JavaScript state, that's it.
 
@@ -14,9 +14,9 @@ It should let me leverage DOM APIs, not abstract them away.
 
   * This means no virtual DOM.
   * It also means there's no **mount** function; components are just functions or Component classes with render functions that return DOM nodes you can compose using a familiar [Hyperscript](https://github.com/hyperhype/hyperscript)-like API and append wherever.
-  * JSX is not currently supported nor recommended, but should be easily implementable. It just doesn't pass my utility/complexity threshold.
   * A DOM [mutation observer](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) keeps track of which DOM nodes with bindings are attached to the document and calls lifecycle listeners (**attach**/**detach**, if any).
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
+  * Finally, the API is JSX-compatible.
 
 I don't care much about benchmarks, so long as my apps are always snappy, never slow.
 
