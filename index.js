@@ -113,6 +113,14 @@ exports.el = (el, ...args) => {
       continue;
     }
 
+    if (k === 'style') {
+      for (let [k2, v2] of Object.entries(v)) {
+        el.style[k2] = v2;
+      }
+
+      continue;
+    }
+
     if (k === 'class') {
       k = 'className';
     }
@@ -478,12 +486,7 @@ exports.update.style = (el, propName, binding) => {
     let v = newValues[k];
 
     if (v !== lastValues[k]) {
-      if (v === undefined || v === null) {
-        el.style.removeProperty(k);
-      }
-      else {
-        el.style.setProperty(k, v);
-      }
+      el.style[k] = v !== undefined && v !== null ? v : '';
     }
   }
 
