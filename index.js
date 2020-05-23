@@ -30,8 +30,8 @@ exports.comment = text => document.createComment(` ${text || 'comment'} `);
 exports.el = (el, ...args) => {
   let props = {};
 
-  if (args[0] && args[0].constructor === Object) {
-    props = args.shift();
+  if (args[0] === null || (args[0] && args[0].constructor === Object)) {
+    props = args.shift() || {};
   }
 
   if (args.length === 1 && Array.isArray(args[0])) {
