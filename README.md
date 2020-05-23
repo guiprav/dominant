@@ -50,7 +50,7 @@ let HelloWorld = () => {
   return dom.el('div', {
     model,
 
-    style: () => ({ color: model.color }),
+    style: { color: model.color },
 
     onAttach: () => {
       setTimeout(() => {
@@ -120,7 +120,7 @@ document.body.append(
       width: '40px',
       height: '40px',
       border: '1px solid red',
-      'background-color': 'blue',
+      backgroundColor: 'blue',
     },
   }),
 
@@ -136,7 +136,7 @@ document.body.append(
       width: '40px',
       height: '40px',
       border: '1px solid red',
-      'background-color': someBgColorVariable,
+      backgroundColor: someBgColorVariable,
     }),
   }),
 
@@ -229,7 +229,7 @@ setTimeout(() => {
 }, 1000);
 
 document.body.append(
-  dom.el('div', { style: () => ({ color }) }, [
+  dom.el('div', { style: { color } }, [
     dom.text(() => `Hello, ${whom}!`),
   ]),
 );
