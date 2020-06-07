@@ -36,6 +36,18 @@ Install a JavaScript bundler and (optionally) a development server. I recommend 
 $ npm install --save-dev browserify wzrd
 ```
 
+If you want JSX, you also need a few more dev dependencies:
+
+```sh
+$ npm install --save-dev babelify @babel/core @babel/plugin-transform-react-jsx
+```
+
+Don't forget to start all your JSX files with this comment annotation:
+
+```js
+// @jsx dom.el
+```
+
 Create your **app.js** or whatever you wanna call your app's entrypoint module:
 
 ```js
@@ -47,6 +59,24 @@ let HelloWorld = () => {
     whom: 'world',
   };
 
+  // JSX version:
+  // return (
+  //   <div
+  //     model={model}
+  //     style={() => ({ color: model.color })}
+  //
+  //     onAttach={() => {
+  //       setTimeout(() => {
+  //         model.color = 'red';
+  //         model.whom = 'human';
+  //       }, 1000);
+  //     }}
+  //   >
+  //     Hello, {dom.text(() => model.whom)}!
+  //   </div>
+  // );
+
+  // Pure JavaScript version:
   return dom.el('div', {
     model,
 
@@ -65,7 +95,11 @@ let HelloWorld = () => {
   ]),
 };
 
-document.body.append(HelloWorld());
+// JSX version:
+// document.body.append(<HelloWorld />);
+
+// Pure JavaScript version:
+document.body.append(dom.el(HelloWorld));
 
 // Global variables greatly help development and debugging, but avoid them in
 // actual source code.
@@ -79,6 +113,12 @@ $ wzrd app.js
 ```
 
 And open up your app in a browser.
+
+If you want JSX, supply the appropriate wzrd/browserify/babelify/babel parameters as well:
+
+```sh
+$ wzrd app.js -- -t [ babelify --plugins [ @babel/plugin-transform-react-jsx ] ]
+```
 
 ## API
 
