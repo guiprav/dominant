@@ -67,10 +67,10 @@ let TodoApp = () => {
           return dom.el('a', {
             href: '#',
 
-            class: dom.binding(() => ({
-              'todoApp-tab': true,
-              'todoApp-mActive': state.activeTab === key,
-            })),
+            class: [
+              'todoApp-tab',
+              () => state.activeTab === key && 'todoApp-mActive',
+            ],
 
             onClick: ev => {
               ev.preventDefault();
@@ -84,10 +84,10 @@ let TodoApp = () => {
 
       dom.el('div', { class: 'todoApp-todoList' }, dom.map(
         () => state.tabTodos, todo => dom.el('div', {
-          class: dom.binding(() => ({
-            todoListItem: true,
-            'todoApp-mDone': todo.isDone,
-          })),
+          class: [
+            'todoListItem',
+            () => todo.isDone && 'todoApp-mDone',
+          ],
         }, [
           dom.el('button', {
             class: 'todoListItem-toggle',
@@ -155,17 +155,11 @@ addEventListener('DOMContentLoaded', () => {
 },{".":2}],2:[function(require,module,exports){
 exports.Binding = class Binding {
   constructor(x) {
-    switch (typeof x) {
-      case 'function':
-        this.get = x;
-        break;
-
-      case 'object':
-        Object.assign(this, x);
-        break;
-
-      default:
-        throw new Error(`Unexpected binding argument type "${typeof x}"`);
+    if (typeof x === 'object' && !Array.isArray(x)) {
+      Object.assign(this, x);
+    }
+    else {
+      this.get = x;
     }
   }
 };
@@ -277,6 +271,30 @@ exports.el = (el, ...args) => {
     }
 
     if (k === 'class') {
+      if (Array.isArray(v)) {
+        let bindingFns = [];
+
+        for (let x of v) {
+          if (x instanceof Function) {
+            bindingFns.push(x);
+          }
+          else if (x) {
+            el.classList.add(...String(x).split(/ |\r|\n/).filter(Boolean));
+          }
+        }
+
+        if (bindingFns.length) {
+          let binding = new exports.Binding(bindingFns);
+
+          let elBindings = el.bindings = el.bindings || {};
+          let propBindings = elBindings[k] = elBindings[k] || [];
+
+          propBindings.push(binding);
+        }
+
+        continue;
+      }
+
       k = 'className';
     }
 
@@ -465,7 +483,10 @@ exports.update.attachListeners = () => null;
 exports.update.detachListeners = () => null;
 
 exports.update.class = (el, propName, binding) => {
-  let newValues = binding.get();
+  let newValues = Array.isArray(binding.get)
+    ? binding.get.flatMap(x => x())
+    : binding.get();
+
   let { lastValues = [] } = binding;
 
   if (typeof newValues === 'string') {

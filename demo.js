@@ -66,10 +66,10 @@ let TodoApp = () => {
           return dom.el('a', {
             href: '#',
 
-            class: dom.binding(() => ({
-              'todoApp-tab': true,
-              'todoApp-mActive': state.activeTab === key,
-            })),
+            class: [
+              'todoApp-tab',
+              () => state.activeTab === key && 'todoApp-mActive',
+            ],
 
             onClick: ev => {
               ev.preventDefault();
@@ -83,10 +83,10 @@ let TodoApp = () => {
 
       dom.el('div', { class: 'todoApp-todoList' }, dom.map(
         () => state.tabTodos, todo => dom.el('div', {
-          class: dom.binding(() => ({
-            todoListItem: true,
-            'todoApp-mDone': todo.isDone,
-          })),
+          class: [
+            'todoListItem',
+            () => todo.isDone && 'todoApp-mDone',
+          ],
         }, [
           dom.el('button', {
             class: 'todoListItem-toggle',
