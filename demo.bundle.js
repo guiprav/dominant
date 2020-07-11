@@ -263,6 +263,11 @@ exports.el = (el, ...args) => {
     }
 
     if (k === 'style') {
+      if (typeof v !== 'object') {
+        el.style = v;
+        continue;
+      }
+
       for (let [k2, v2] of Object.entries(v)) {
         el.style[k2] = v2;
       }
