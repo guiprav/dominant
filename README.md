@@ -51,7 +51,7 @@ Don't forget to start all your JSX files with this comment annotation:
 Create your **app.js** or whatever you wanna call your app's entrypoint module:
 
 ```js
-let dom = require('dominant');
+let dom = require('dominant-ui');
 
 let HelloWorld = () => {
   let model = {
