@@ -1,0 +1,27 @@
+{
+  "name": "dominant-ui",
+  "version": "1.0.0",
+  "description": "Dysfunctional JavaScript UI library",
+  "author": "Gui Prá",
+  "license": "ISC",
+  "keywords": [
+    "dominant"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "mocha -r ts-node/register src/**/*.spec.ts"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/jsdom": "^16.2.3",
+    "@types/mocha": "^8.0.0",
+    "@types/sinon": "^9.0.4",
+    "chai": "^4.2.0",
+    "jsdom": "^16.3.0",
+    "mocha": "^8.0.1",
+    "sinon": "^9.0.2",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "target": "ES6",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "lib": ["es2020", "dom", "dom.iterable"],
+    "jsx": "react",
+    "jsxFactory": "dom.el"
+  },
+  "include": ["src/**/*"]
+}
