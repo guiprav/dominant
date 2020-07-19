@@ -14,20 +14,6 @@ for (let k of [
 
 describe('Binding', () => {
   describe('constructor', () => {
-    it('accepts and stores a BindingGetter', () => {
-      let getter = () => 1;
-      let b = new dom.Binding(getter);
-
-      assert.equal(b.get, getter);
-    });
-
-    it('accepts and stores BindingGetters array', () => {
-      let getters = [() => 1, () => 2];
-      let b = new dom.Binding(getters);
-
-      assert.equal(b.get, getters);
-    });
-
     it('accepts and stores BindingGetterSetter object', () => {
       let props = {
         get: () => 1,
@@ -38,6 +24,20 @@ describe('Binding', () => {
 
       assert.equal(b.get, props.get);
       assert.equal(b.set, props.set);
+    });
+
+    it('accepts and stores BindingGetters array', () => {
+      let getters = [() => 1, () => 2];
+      let b = new dom.Binding(getters);
+
+      assert.equal(b.get, getters);
+    });
+
+    it('accepts and stores a single BindingGetter', () => {
+      let getter = () => 1;
+      let b = new dom.Binding(getter);
+
+      assert.equal(b.get, getter);
     });
   });
 });
@@ -75,6 +75,70 @@ describe('Component', () => {
 });
 
 describe('el', () => {
+  describe('when type extends Component', () => {
+    let instance: any;
+
+    beforeEach(() => {
+      instance = null;
+    });
+
+    class TestComponent extends dom.Component {
+      props: any;
+
+      constructor(props: any) {
+        super();
+
+        this.props = props;
+        instance = this;
+      }
+
+      render() {
+        return null;
+      }
+    }
+
+    it('instantiates it, calls the render method, and returns the result', () => {
+      let props = { test: 123 };
+      let el = dom.el(TestComponent, props);
+
+      assert.isNull(el);
+
+      assert.instanceOf(instance, TestComponent);
+      assert.deepEqual(instance.props.test, 123);
+    });
+
+    it('passes flattened children array as prop', () => {
+      let children = [[dom.el('div')], [[dom.el('div')]]];
+      let el = dom.el(TestComponent, null, children);
+
+      assert.deepEqual(instance.props.children, children.flat(10));
+    });
+  });
+
+  describe('when type is any other function', () => {
+    it('calls the function and returns the result', () => {
+      let el = document.createElement('div');
+      let fn = sinon.fake.returns(el);
+
+      let props = { test: 123 };
+      let el2 = dom.el(fn, props);
+
+      assert.equal(el, el2);
+
+      assert.isTrue(fn.called);
+      assert.deepEqual(fn.args[0][0].test, 123);
+    });
+
+    it('passes flattened children array as prop', () => {
+      let fn = sinon.fake();
+      let children = [[dom.el('div')], [[dom.el('div')]]];
+
+      let el = dom.el(fn, null, children);
+
+      assert.deepEqual(fn.args[0][0].children, children.flat(10));
+    });
+  });
+
   describe('when type is a string', () => {
     it('creates the specified element', () => {
       let el = dom.el('div');
@@ -84,44 +148,33 @@ describe('el', () => {
     });
   });
 
-  describe('when type extends Component', () => {
-    it('instantiates it, calls the render method, and returns the result', () => {
-      let instance: any;
-
-      class TestComponent extends dom.Component {
-        props: any;
-
-        constructor(props: any) {
-          super();
-
-          this.props = props;
-          instance = this;
-        }
-
-        render() {
-          return null;
-        }
-      }
-
-      let props = { test: 123 };
-      let el = dom.el(TestComponent, props);
-
-      assert.isNull(el);
-
-      assert.instanceOf(instance, TestComponent);
-      assert.deepEqual(instance.props, { ...props, children: [] });
-    });
-  });
-
   describe('when props are supplied', () => {
-    it('sets regular props to the created element', () => {
-      let el = dom.el('div', { id: 'test' });
-      assert.equal(el.id, 'test');
+    it('adds event listeners for event listener props', () => {
+      let fn = sinon.fake();
+      let el = dom.el('button', { onClick: fn });
+
+      assert.isFalse(fn.called);
+      el.click();
+      assert.isTrue(fn.called);
     });
 
-    it('sets class prop to the created element (string)', () => {
-      let el = dom.el('div', { class: 'test' });
-      assert.equal(el.className, 'test');
+    it('stores Binding props on el.bindings', () => {
+      let b = dom.binding({
+        get: () => 1,
+        set: (x: string) => null,
+      });
+
+      let el = dom.el('input', { value: b });
+
+      assert.deepEqual((el as any).bindings, { value: b });
+    });
+
+    it('wraps non-event listener function props as Bindings and store on el.bindings', () => {
+      let fn = () => 'test';
+      let el = dom.el('input', { value: fn });
+
+      assert.instanceOf((el as any).bindings.value, dom.Binding);
+      assert.deepEqual((el as any).bindings.value, { get: fn });
     });
 
     it('sets class prop to the created element (array)', () => {
@@ -134,9 +187,9 @@ describe('el', () => {
       assert.equal(el.className, 'test1 test2 test3 test4');
     });
 
-    it('sets style prop to the created element (string)', () => {
-      let el = dom.el('div', { style: 'text-align: center' });
-      assert.equal(el.style.getPropertyValue('text-align'), 'center');
+    it('sets class prop to the created element (string)', () => {
+      let el = dom.el('div', { class: 'test' });
+      assert.equal(el.className, 'test');
     });
 
     it('sets style prop to the created element (object)', () => {
@@ -147,31 +200,23 @@ describe('el', () => {
       assert.equal(el.style.getPropertyValue('text-align'), 'center');
     });
 
-    it('adds event listeners for event listener props', () => {
-      let fn = sinon.fake();
-      let el = dom.el('button', { onClick: fn });
+    it('sets style prop to the created element (string)', () => {
+      let el = dom.el('div', { style: 'text-align: center' });
+      assert.equal(el.style.getPropertyValue('text-align'), 'center');
+    });
 
-      assert.isFalse(fn.called);
-      el.click();
-      assert.isTrue(fn.called);
+    it('sets regular props to the created element', () => {
+      let el = dom.el('div', { id: 'test' });
+      assert.equal(el.id, 'test');
     });
   });
 
-  describe('when childNodes are supplied', () => {
-    it('appends them to the created element', () => {
-      let childNodes = [dom.el('div'), dom.el('div')];
-      let el = dom.el('div', null, childNodes);
-
-      assert.deepEqual([...el.childNodes], childNodes);
-    });
-  });
-
-  describe('when childNodes are nested arrays', () => {
+  describe('when children are supplied', () => {
     it('flattens the array and appends them to the created element', () => {
-      let childNodes = [[dom.el('div')], [[dom.el('div')]]];
-      let el = dom.el('div', null, childNodes);
+      let children = [[dom.el('div')], [[dom.el('div')]]];
+      let el = dom.el('div', null, children);
 
-      assert.deepEqual([...el.childNodes], childNodes.flat(10));
+      assert.deepEqual([...el.children], children.flat(10));
     });
   });
 });

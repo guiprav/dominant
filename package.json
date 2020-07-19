@@ -7,6 +7,10 @@
   "keywords": [
     "dominant"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guiprav/dominant-ui"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
