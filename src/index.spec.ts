@@ -6,6 +6,7 @@ import { assert } from 'chai';
 let jsdom = new JSDOM('<!doctype html>');
 
 for (let k of [
+  'Comment',
   'HTMLElement',
   'document',
 ]) {
@@ -218,5 +219,21 @@ describe('el', () => {
 
       assert.deepEqual([...el.children], children.flat(10));
     });
+  });
+});
+
+describe('comment', () => {
+  it('creates and returns the properly formatted comment (when text.length > 0)', () => {
+    let c = dom.comment('test');
+
+    assert.instanceOf(c, Comment);
+    assert.equal(c.textContent, ' test ');
+  });
+
+  it('creates and returns the properly formatted comment (when text.length === 0)', () => {
+    let c = dom.comment();
+
+    assert.instanceOf(c, Comment);
+    assert.equal(c.textContent, ' ');
   });
 });

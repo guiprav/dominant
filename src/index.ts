@@ -124,6 +124,9 @@ function createElement(
   return el;
 }
 
+let createComment = (text?: string | null): Comment =>
+  document.createComment(text ? ` ${text} ` : ' ');
+
 export default {
   Binding,
   binding,
@@ -131,4 +134,5 @@ export default {
   Component,
 
   el: createElement,
+  comment: createComment,
 };
