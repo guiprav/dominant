@@ -6,11 +6,31 @@ type BindingGetterSetter = {
   set?: BindingSetter,
 };
 
-type BindingCtorVal = BindingGetter | BindingGetter[] | BindingGetterSetter;
+type ConditionalBindingProps = {
+  get: BindingGetter,
+  thenNode: Node,
+  elseNode?: Node | null,
+};
+
+type MapBindingProps = {
+  get: BindingGetter,
+  fn: (x: any) => void,
+};
+
+type BindingCtorVal =
+  BindingGetter |
+  BindingGetter[] |
+  BindingGetterSetter |
+  ConditionalBindingProps |
+  MapBindingProps;
 
 class Binding {
   get: BindingGetter | BindingGetter[] | null;
   set: BindingSetter | null;
+
+  // ConditionalBindingProps:
+  thenNode: Node | null;
+  elseNode: Node | null;
 
   constructor(x: BindingCtorVal) {
     if (typeof x === 'object' && !Array.isArray(x)) {
@@ -21,7 +41,7 @@ class Binding {
   }
 }
 
-let binding = (x: BindingCtorVal) => new Binding(x);
+let createBinding = (x: BindingCtorVal) => new Binding(x);
 
 class Component {
   render() {
@@ -69,7 +89,7 @@ function createElement(
 
     // Wrap any other function props in Bindings.
     if (v instanceof Function) {
-      v = binding(v);
+      v = createBinding(v);
     }
 
     // Store Bindings to element.
@@ -127,12 +147,44 @@ function createElement(
 let createComment = (text?: string | null): Comment =>
   document.createComment(text ? ` ${text} ` : ' ');
 
+let createCommentWithBinding = (
+  bindingKey: string,
+  bindingVal: BindingCtorVal,
+): Comment => {
+  let c = createComment(bindingKey);
+
+  (c as any).bindings = {
+    [bindingKey]: createBinding(bindingVal),
+  };
+
+  return c;
+};
+
+let createConditional = (
+  predFn: () => Boolean,
+  thenNode: Node,
+  elseNode?: Node | null,
+): Comment => createCommentWithBinding('if', {
+  get: predFn,
+  thenNode,
+  elseNode,
+});
+
+type MapGetter<T> = () => T[];
+type MapFn<T> = (x: T) => Node | Node[];
+
+let createMap = <T>(get: MapGetter<T>, fn: MapFn<T>): Comment =>
+  createCommentWithBinding('map', { get, fn });
+
 export default {
   Binding,
-  binding,
+  binding: createBinding,
 
   Component,
 
   el: createElement,
   comment: createComment,
+
+  if: createConditional,
+  map: createMap,
 };

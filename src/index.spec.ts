@@ -237,3 +237,45 @@ describe('comment', () => {
     assert.equal(c.textContent, ' ');
   });
 });
+
+describe('if', () => {
+  it('creates and returns the properly formatted comment node', () => {
+    let c = dom.if(() => false, document.createElement('div'));
+
+    assert.instanceOf(c, Comment);
+    assert.equal(c.textContent, ' if ');
+  });
+
+  it('creates and stores the conditional Binding on c.bindings', () => {
+    let fn = () => false;
+    let el = document.createElement('div');
+
+    let c = dom.if(fn, el);
+
+    assert.instanceOf((c as any).bindings.if, dom.Binding);
+
+    assert.equal((c as any).bindings.if.get, fn);
+    assert.equal((c as any).bindings.if.thenNode, el);
+  });
+});
+
+describe('map', () => {
+  it('creates and returns the properly formatted comment node', () => {
+    let c = dom.map(() => [1], (x: number) => document.createElement('div'));
+
+    assert.instanceOf(c, Comment);
+    assert.equal(c.textContent, ' map ');
+  });
+
+  it('creates and stores the conditional Binding on c.bindings', () => {
+    let getFn = () => [1];
+    let mapFn = (x: number) => document.createElement('div');
+
+    let c = dom.map(getFn, mapFn);
+
+    assert.instanceOf((c as any).bindings.map, dom.Binding);
+
+    assert.equal((c as any).bindings.map.get, getFn);
+    assert.equal((c as any).bindings.map.fn, mapFn);
+  });
+});
