@@ -27,7 +27,7 @@ These are this library's design principles. I thought about them by applying fir
 Install Dominant:
 
 ```sh
-$ npm install --save guiprav/dominant
+$ npm install --save guiprav/dominant-ui
 ```
 
 Install a JavaScript bundler and (optionally) a development server. I recommend [Browserify](https://github.com/browserify) and [wzrd](https://github.com/maxogden/wzrd):
