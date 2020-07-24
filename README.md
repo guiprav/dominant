@@ -26,12 +26,12 @@ The easiest way to bootstrap a Dominant project is to use [Create Snowpack App](
 
 ```sh
 # Replace my-app with the desired project name.
-$ npx create-snowpack-app --template snowpack-dominant-typescript my-app
+$ npx create-snowpack-app --template @dominant/app-template my-app
 ```
 
 `npx` (part of npm) will download and install `create-snowpack-app` for you (unless it's already installed in your system) and run it.
 
-`create-snowpack-app` will download the `snowpack-dominant-typescript` project template into a directory called `my-app` (or whatever name you choose) and that will automatically install all the necessary dependencies, including Dominant.
+`create-snowpack-app` will download `@dominant/app-template` into a directory called `my-app` (or whatever name you choose) and that will automatically install all the necessary dependencies, including Dominant.
 
 Once the script finishes, you'll be able to change into the newly created directory and start the Dev Server:
 
