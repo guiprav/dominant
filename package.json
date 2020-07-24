@@ -1,5 +1,5 @@
 {
-  "name": "dominant-ui",
+  "name": "@dominant/core",
   "version": "0.0.0",
   "description": "Dysfunctional JavaScript UI library",
   "author": "Gui Prá",
@@ -9,7 +9,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/guiprav/dominant-ui"
+    "url": "https://github.com/guiprav/dominant"
   },
   "scripts": {
     "build": "browserify demo.js -o demo.bundle.js"
