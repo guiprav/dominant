@@ -183,12 +183,7 @@ exports.el = (el, ...args) => {
     props = args.shift() || {};
   }
 
-  if (args.length === 1 && Array.isArray(args[0])) {
-    props.children = args.shift();
-  }
-  else {
-    props.children = args;
-  }
+  props.children = args.flat(10);
 
   let { children } = props;
 
@@ -308,7 +303,7 @@ exports.el = (el, ...args) => {
 
   if (children.length) {
     el.innerHTML = '';
-    el.append(...children.flat(10));
+    el.append(...children);
   }
 
   if (el.bindings && document.body.contains(el)) {
