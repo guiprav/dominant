@@ -28,7 +28,11 @@ exports.el = (el, ...args) => {
     props = args.shift() || {};
   }
 
-  props.children = args.flat(10);
+  if (args.length) {
+    props.children = args.flat(10);
+  } else if (!props.children) {
+    props.children = [];
+  }
 
   let { children } = props;
 
