@@ -8,6 +8,7 @@ let jsdom = new JSDOM('<!doctype html>');
 for (let k of [
   'Comment',
   'HTMLElement',
+  'Text',
   'document',
 ]) {
   (global as any)[k] = (jsdom as any).window[k];
@@ -188,9 +189,9 @@ describe('el', () => {
       assert.equal(el.className, 'test1 test2 test3 test4');
     });
 
-    it('sets class prop to the created element (string)', () => {
-      let el = dom.el('div', { class: 'test' });
-      assert.equal(el.className, 'test');
+    it('sets class prop to the created element (string of space-delimited class names)', () => {
+      let el = dom.el('div', { class: 'test1 test2' });
+      assert.equal(el.className, 'test1 test2');
     });
 
     it('sets style prop to the created element (object)', () => {
@@ -277,5 +278,30 @@ describe('map', () => {
 
     assert.equal((c as any).bindings.map.get, getFn);
     assert.equal((c as any).bindings.map.fn, mapFn);
+  });
+});
+
+describe('resolve', () => {
+  it('returns x() when x is a Function', () => {
+    assert.equal(dom.resolve(() => 123), 123);
+  });
+
+  it('returns x when x is not a Function', () => {
+    assert.equal(dom.resolve(321), 321);
+  });
+});
+
+describe('text', () => {
+  it('creates and returns a text node', () => {
+    let n = dom.text(() => 'hello');
+    assert.instanceOf(n, Text);
+  });
+
+  it('creates and stores the textContent Binding on n.bindings', () => {
+    let getFn = () => 'hello';
+    let n = dom.text(getFn);
+
+    assert.instanceOf((n as any).bindings.textContent, dom.Binding);
+    assert.equal((n as any).bindings.textContent.get, getFn);
   });
 });

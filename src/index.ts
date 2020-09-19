@@ -176,6 +176,22 @@ type MapFn<T> = (x: T) => Node | Node[];
 let createMap = <T>(get: MapGetter<T>, fn: MapFn<T>): Comment =>
   createCommentWithBinding('map', { get, fn });
 
+type Resolvable<T> = T | (() => T);
+
+let resolve = <T>(x: Resolvable<T>): T => x instanceof Function ? x() : x;
+
+type TextGetter = () => string;
+
+let createTextNode = (get: TextGetter): Text => {
+  let n = document.createTextNode('');
+
+  (n as any).bindings = {
+    textContent: createBinding(get),
+  };
+
+  return n;
+};
+
 export default {
   Binding,
   binding: createBinding,
@@ -187,4 +203,6 @@ export default {
 
   if: createConditional,
   map: createMap,
+  resolve,
+  text: createTextNode,
 };
