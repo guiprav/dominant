@@ -197,6 +197,21 @@ type ProcessMutationsDeps = {
   update: (n: Node) => void,
 };
 
+let forEachNodeWithBindings = (ns: Node[], cb: (n: Node) => void) => {
+  for (let n of ns) {
+    (n as any).bindings && cb(n);
+
+    let walker = document.createTreeWalker(
+      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+    );
+
+    while (walker.nextNode()) {
+      let n2 = walker.currentNode;
+      (n2 as any).bindings && cb(n2);
+    }
+  }
+};
+
 let processMutations = (
   muts: MutationRecord[],
   observer: MutationObserver | null,
@@ -210,44 +225,18 @@ let processMutations = (
     n => !addedNodes.includes(n),
   );
 
-  let attachNode = (n: Node) => {
+  forEachNodeWithBindings(removedNodes, n => {
+    di.boundNodes.delete(n);
+  });
+
+  forEachNodeWithBindings(addedNodes, n => {
     if (di.boundNodes.has(n)) {
       return;
     }
 
     di.boundNodes.add(n);
     di.update(n);
-  };
-
-  let detachNode = (n: Node) => {
-    di.boundNodes.delete(n);
-  };
-
-  for (let n of removedNodes) {
-    (n as any).bindings && detachNode(n);
-
-    let walker = document.createTreeWalker(
-      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
-    );
-
-    while (walker.nextNode()) {
-      let n2 = walker.currentNode;
-      (n2 as any).bindings && detachNode(n2);
-    }
-  }
-
-  for (let n of addedNodes) {
-    (n as any).bindings && attachNode(n);
-
-    let walker = document.createTreeWalker(
-      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
-    );
-
-    while (walker.nextNode()) {
-      let n2 = walker.currentNode;
-      (n2 as any).bindings && attachNode(n2);
-    }
-  }
+  });
 };
 
 type Resolvable<T> = T | (() => T);
