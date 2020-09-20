@@ -176,10 +176,6 @@ type MapFn<T> = (x: T) => Node | Node[];
 let createMap = <T>(get: MapGetter<T>, fn: MapFn<T>): Comment =>
   createCommentWithBinding('map', { get, fn });
 
-type Resolvable<T> = T | (() => T);
-
-let resolve = <T>(x: Resolvable<T>): T => x instanceof Function ? x() : x;
-
 type TextGetter = () => string;
 
 let createTextNode = (get: TextGetter): Text => {
@@ -192,6 +188,72 @@ let createTextNode = (get: TextGetter): Text => {
   return n;
 };
 
+let boundNodes = new Set<Node>();
+
+let update = (n: Node): void => {};
+
+type ProcessMutationsDeps = {
+  boundNodes: Set<Node>,
+  update: (n: Node) => void,
+};
+
+let processMutations = (
+  muts: MutationRecord[],
+  observer: MutationObserver | null,
+  di: ProcessMutationsDeps = { boundNodes, update },
+) => {
+  let { body } = document;
+
+  let addedNodes = muts.flatMap(x => [...x.addedNodes]);
+
+  let removedNodes = muts.flatMap(x => [...x.removedNodes]).filter(
+    n => !addedNodes.includes(n),
+  );
+
+  let attachNode = (n: Node) => {
+    if (di.boundNodes.has(n)) {
+      return;
+    }
+
+    di.boundNodes.add(n);
+    di.update(n);
+  };
+
+  let detachNode = (n: Node) => {
+    di.boundNodes.delete(n);
+  };
+
+  for (let n of removedNodes) {
+    (n as any).bindings && detachNode(n);
+
+    let walker = document.createTreeWalker(
+      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+    );
+
+    while (walker.nextNode()) {
+      let n2 = walker.currentNode;
+      (n2 as any).bindings && detachNode(n2);
+    }
+  }
+
+  for (let n of addedNodes) {
+    (n as any).bindings && attachNode(n);
+
+    let walker = document.createTreeWalker(
+      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+    );
+
+    while (walker.nextNode()) {
+      let n2 = walker.currentNode;
+      (n2 as any).bindings && attachNode(n2);
+    }
+  }
+};
+
+type Resolvable<T> = T | (() => T);
+
+let resolve = <T>(x: Resolvable<T>): T => x instanceof Function ? x() : x;
+
 export default {
   Binding,
   binding: createBinding,
@@ -203,6 +265,8 @@ export default {
 
   if: createConditional,
   map: createMap,
-  resolve,
   text: createTextNode,
+
+  processMutations,
+  resolve,
 };

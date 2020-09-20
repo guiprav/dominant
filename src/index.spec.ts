@@ -8,6 +8,7 @@ let jsdom = new JSDOM('<!doctype html>');
 for (let k of [
   'Comment',
   'HTMLElement',
+  'NodeFilter',
   'Text',
   'document',
 ]) {
@@ -281,16 +282,6 @@ describe('map', () => {
   });
 });
 
-describe('resolve', () => {
-  it('returns x() when x is a Function', () => {
-    assert.equal(dom.resolve(() => 123), 123);
-  });
-
-  it('returns x when x is not a Function', () => {
-    assert.equal(dom.resolve(321), 321);
-  });
-});
-
 describe('text', () => {
   it('creates and returns a text node', () => {
     let n = dom.text(() => 'hello');
@@ -303,5 +294,211 @@ describe('text', () => {
 
     assert.instanceOf((n as any).bindings.textContent, dom.Binding);
     assert.equal((n as any).bindings.textContent.get, getFn);
+  });
+});
+
+describe('processMutations', () => {
+  let makeBoundNode = () => {
+    let n = document.createElement('div');
+    (n as any).bindings = true;
+
+    return n;
+  };
+
+  it('adds addedNodes with n.bindings to boundNodes', () => {
+    let boundNodes = new Set<Node>();
+
+    let nodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    let muts = ([
+      { addedNodes: nodes.slice(0, 4), removedNodes: [] },
+      { addedNodes: nodes.slice(4, 8), removedNodes: [] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    assert.sameMembers([...boundNodes], nodes.filter(n => (n as any).bindings));
+  });
+
+  it('updates addedNodes with n.bindings', () => {
+    let boundNodes = new Set<Node>();
+
+    let nodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    let muts = ([
+      { addedNodes: nodes.slice(0, 4), removedNodes: [] },
+      { addedNodes: nodes.slice(4, 8), removedNodes: [] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    for (let n of nodes.filter(n => (n as any).bindings)) {
+      assert.ok(update.calledWith(n));
+    }
+  });
+
+  it('removes removedNodes with n.bindings from boundNodes', () => {
+    let removedNodes = [
+      makeBoundNode(),
+      makeBoundNode(),
+    ];
+
+    let allNodes = [
+      removedNodes[0],
+      makeBoundNode(),
+      removedNodes[1],
+      makeBoundNode(),
+    ];
+
+    let boundNodes = new Set(allNodes);
+
+    let muts = ([
+      { addedNodes: [], removedNodes: [removedNodes[0]] },
+      { addedNodes: [], removedNodes: [removedNodes[1]] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    for (let n of removedNodes) {
+      assert.notInclude([...boundNodes], n);
+    }
+  });
+
+  it('adds addedNodes descendants with n.bindings to boundNodes', () => {
+    let boundNodes = new Set<Node>();
+
+    let parentNodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    let descendantNodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    parentNodes[0].append(descendantNodes[0], descendantNodes[1]);
+    parentNodes[3].append(descendantNodes[2], descendantNodes[3]);
+
+    let muts = ([
+      { addedNodes: parentNodes.slice(0, 2), removedNodes: [] },
+      { addedNodes: parentNodes.slice(2, 4), removedNodes: [] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    for (let n of descendantNodes.filter(n => (n as any).bindings)) {
+      assert.include([...boundNodes], n);
+    }
+  });
+
+  it('updates addedNodes descendants with n.bindings', () => {
+    let boundNodes = new Set<Node>();
+
+    let parentNodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    let descendantNodes = [
+      document.createElement('div'),
+      makeBoundNode(),
+      document.createElement('div'),
+      makeBoundNode(),
+    ];
+
+    parentNodes[0].append(descendantNodes[0], descendantNodes[1]);
+    parentNodes[3].append(descendantNodes[2], descendantNodes[3]);
+
+    let muts = ([
+      { addedNodes: parentNodes.slice(0, 2), removedNodes: [] },
+      { addedNodes: parentNodes.slice(2, 4), removedNodes: [] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    for (let n of descendantNodes.filter(n => (n as any).bindings)) {
+      assert.ok(update.calledWith(n));
+    }
+  });
+
+  it('removes removedNodes descendants with n.bindings from boundNodes', () => {
+    let removedNodes = [
+      document.createElement('div'),
+      document.createElement('div'),
+    ];
+
+    let removedDescendantNodes = [
+      makeBoundNode(),
+      makeBoundNode(),
+    ];
+
+    removedNodes[0]
+      .append(document.createElement('div'), removedDescendantNodes[0]);
+
+    removedNodes[1]
+      .append(document.createElement('div'), removedDescendantNodes[1]);
+
+    let allNodes = [
+      makeBoundNode(),
+      removedNodes[0],
+      removedDescendantNodes[0],
+      makeBoundNode(),
+      removedNodes[1],
+      removedDescendantNodes[1],
+    ];
+
+    let boundNodes = new Set(allNodes);
+
+    let muts = ([
+      { addedNodes: [], removedNodes: [removedNodes[0]] },
+      { addedNodes: [], removedNodes: [removedNodes[1]] },
+    ] as unknown as MutationRecord[]);
+
+    let update = sinon.fake();
+    dom.processMutations(muts, null, { boundNodes, update });
+
+    for (let n of removedDescendantNodes) {
+      assert.notInclude([...boundNodes], n);
+    }
+  });
+});
+
+describe('resolve', () => {
+  it('returns x() when x is a Function', () => {
+    assert.equal(dom.resolve(() => 123), 123);
+  });
+
+  it('returns x when x is not a Function', () => {
+    assert.equal(dom.resolve(321), 321);
   });
 });
