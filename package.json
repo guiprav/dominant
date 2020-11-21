@@ -1,6 +1,6 @@
 {
   "name": "@dominant/core",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Dysfunctional JavaScript UI library",
   "author": "Gui Prá",
   "license": "ISC",
@@ -19,5 +19,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "dependencies": {}
 }

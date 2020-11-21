@@ -38,7 +38,10 @@ exports.el = (el, ...args) => {
 
   switch (typeof el) {
     case 'string':
-      el = document.createElement(el);
+      el = !el.startsWith('svg:')
+        ? document.createElement(el)
+        : document.createElementNS('http://www.w3.org/2000/svg', el.split(':')[1]);
+
       break;
 
     case 'function':
@@ -100,7 +103,7 @@ exports.el = (el, ...args) => {
     if (
       k.startsWith('aria-') ||
       k.startsWith('data-') ||
-      el.tagName.toUpperCase() === 'SVG'
+      el.namespaceURI.endsWith('/svg')
     ) {
       el.setAttribute(k, v);
       continue;
@@ -483,7 +486,7 @@ exports.update.otherProps = (el, propName, binding) => {
     if (
       propName.startsWith('aria-') ||
       propName.startsWith('data-') ||
-      el.tagName.toUpperCase() === 'SVG'
+      el.namespaceURI.endsWith('/svg')
     ) {
       if (newValue === undefined || newValue === null) {
         el.removeAttribute(propName);
