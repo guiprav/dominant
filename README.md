@@ -20,6 +20,10 @@ It should let me leverage DOM APIs, not abstract them away.
 
 These are this library's design principles. I thought about them by applying first principles thinking to come up with a minimum set of features a JavaScript UI library needs to enable sane, comfortable development of modern web apps.
 
+Performance demo:
+
+[![1k Components demo screenshot](https://dominant-demos.netlify.app/screenshot.png)](https://dominant-demos.netlify.app)
+
 ## Setup
 
 The easiest way to bootstrap a Dominant project is to use [Create Snowpack App](https://www.snowpack.dev/#create-snowpack-app-(csa)). If you have npm installed, the following command is all that's necessary:
