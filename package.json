@@ -15,6 +15,12 @@
     "build": "browserify demo.js -o demo.bundle.js"
   },
   "devDependencies": {
+    "@babel/cli": "^7.12.8",
+    "@babel/core": "^7.12.9",
+    "@babel/plugin-transform-arrow-functions": "^7.12.1",
+    "@babel/plugin-transform-classes": "^7.12.1",
+    "@babel/plugin-transform-for-of": "^7.12.1",
+    "@babel/plugin-transform-spread": "^7.12.1",
     "browserify": "^16.3.0"
   },
   "publishConfig": {
