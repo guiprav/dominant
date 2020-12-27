@@ -477,3 +477,21 @@ describe('resolve', () => {
     assert.equal(d.resolve(321), 321);
   });
 });
+
+describe('update', () => {
+  let makeBoundNode = b => {
+    let n = document.createElement('div');
+    n.bindings = [b];
+
+    return n;
+  };
+
+  it('updates bindings from all boundNodes', () => {
+    let fns = [1, 2].map(sinon.fake.returns);
+    let boundNodes = fns.map(fn => d.el('input', { value: fn }));
+
+    d.update(null, { boundNodes });
+    assert.equal(boundNodes[0].value, '1');
+    assert.equal(boundNodes[1].value, '2');
+  });
+});

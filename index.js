@@ -183,8 +183,6 @@ function createTextNode(getFn) {
 
 let boundNodes = [];
 
-//let update = (n: Node): void => {};
-
 // TODO: Workaround for IE11's broken TreeWalker.
 function forEachNodeWithBindings(ns, cb) {
   let i, n, n2, walker;
@@ -254,6 +252,28 @@ function processMutations(muts, observer, di) {
 
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
+function update(n, di) {
+  di = di || {};
+  di.boundNodes = di.boundNodes || [];
+  di.console = di.console || console;
+
+  let i, b;
+
+  // When a node is supplied, update all its bindings, catch and log errors.
+  if (n) {
+    for (i = 0; i < n.bindings.length; i++) {
+      b = n.bindings[i];
+      try { b.update() }
+      catch (e) { di.console.error(e, 'in', n, b) }
+    }
+
+    return;
+  }
+
+  // Otherwise we apply update (this function) on all boundNodes.
+  for (i = 0; i < di.boundNodes.length; i++) { update(di.boundNodes[i], di) }
+}
+
 objAssign(exports, {
   Binding: Binding,
   binding: createBinding,
@@ -268,7 +288,8 @@ objAssign(exports, {
   processMutations: processMutations,
   boundNodes: boundNodes,
 
-  resolve: resolve
+  resolve: resolve,
+  update: update
 });
 
 // IE11 helpers:
