@@ -20,7 +20,7 @@ function createElement(type) {
 
   let rest = [].slice.call(arguments, 1);
 
-  let props = [undefined, null].indexOf(rest[0]) !== -1 ||
+  let props = rest[0] === undefined || rest[0] === null ||
     (rest[0] && rest[0].constructor === Object) ? rest.shift() : {};
 
   // Flatten children arrays.
@@ -214,32 +214,37 @@ function processMutations(muts, observer, di) {
 
   let body = document.body;
 
-  let addedNodes = [];
-  let removedNodes = [];
+  let newNodes = [];
+  let orphanedNodes = [];
 
+  // Collect newNodes.
   for (i = 0; i < muts.length; i++) {
-    addedNodes.push.apply(addedNodes, muts[i].addedNodes);
+    mut = muts[i];
+
+    for (j = 0; j < mut.addedNodes.length; j++) {
+      n = mut.addedNodes[j];
+      if (di.boundNodes.indexOf(n) === -1) { newNodes.push(n) }
+    }
   }
 
-  // Some muts[?].removedNodes are actually _moved_ nodes (i.e. they are also
-  // present in muts[?].addedNodes). We're only interested in actual removed
-  // nodes here, that's why merging these two loops could be tricky, maybe
-  // impossible. I'll give it a try at some point, but for now this works fine.
+  // Collect orphanedNodes.
   for (i = 0; i < muts.length; i++) {
     mut = muts[i];
 
     for (j = 0; j < mut.removedNodes.length; j++) {
       n = mut.removedNodes[j];
-      if (addedNodes.indexOf(n) === -1) { removedNodes.push(n) }
+      if (newNodes.indexOf(n) === -1) { orphanedNodes.push(n) }
     }
   }
 
-  forEachNodeWithBindings(removedNodes, function(n) {
+  // Recursively remove boundNodes collected in the orphanedNodes array.
+  forEachNodeWithBindings(orphanedNodes, function(n) {
     i = di.boundNodes.indexOf(n);
     if (i !== -1) { di.boundNodes.splice(i, 1) }
   });
 
-  forEachNodeWithBindings(addedNodes, function(n) {
+  // Recursively add boundNodes collected in the newNodes array.
+  forEachNodeWithBindings(newNodes, function(n) {
     if (di.boundNodes.indexOf(n) === -1) {
       di.boundNodes.push(n);
       di.update(n);
