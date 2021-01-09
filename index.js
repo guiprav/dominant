@@ -8,10 +8,93 @@ function Binding(x) {
   }
 }
 
+let ariaDataRegExp = /^(aria|data)-/;
+let svgNsRegExp = /\/svg$/;
+
+Binding.prototype.update = function() {
+  let el = this.target, newValue = this.get();
+
+  if (newValue !== this.lastValue) {
+    if (ariaDataRegExp.test(this.key) || svgNsRegExp.test(el.namespaceURI)) {
+      if (newValue === undefined || newValue === null) {
+        el.removeAttribute(this.key);
+      } else {
+        el.setAttribute(this.key, newValue);
+      }
+    } else {
+      el[this.key] = newValue;
+    }
+  }
+
+  this.lastValue = newValue;
+};
+
+Binding.specialUpdateFnsByKey = {
+  class: function classBindingUpdate() {
+    let i, x, el = this.target, newValue = Array.isArray(this.get)
+      ? flatMap(binding.get, function(x) { return x() })
+      : binding.get();
+
+    if (typeof newValue === 'string') { newValue = [newValue] }
+
+    newValue = flatMap(newValue, function(x) {
+      return x && String(x).split(/ |\r|\n/);
+    }).filter(Boolean);
+
+    this.lastValue = this.lastValue || [];
+
+    for (i = 0; i < this.lastValue.length; i++) {
+      x = this.lastValue[i];
+      if (newValue.indexOf(x) === -1) { el.classList.remove(x) }
+    }
+
+    for (i = 0; i < newValue.length; i++) {
+      x = newValue[i];
+      if (lastValue.indexOf(x) === -1) { el.classList.add(x) }
+    }
+
+    this.lastValue = newValue;
+  },
+
+  style: function styleBindingUpdate() {
+    let newValue = this.get();
+
+    if (newValue !== this.lastValue) {
+      this.target.style[this.subkey] =
+        newValue !== undefined && newValue !== null ? newValue : '';
+    }
+
+    this.lastValue = newValue;
+  },
+
+  value: function valueBindingUpdate() {
+    let newValue;
+
+    if (!this.setHandler) {
+      this.target.addEventListener('keyup', this.setHandler = function(ev) {
+        let x = ev.target.value;
+        this.lastValue = this.set ? this.set(x) : x;
+        update();
+      });
+    }
+
+    if (this.get) {
+      newValue = this.get();
+
+      if (newValue !== this.lastValue) { this.target.value = newValue }
+      this.lastValue = newValue;
+    }
+  }
+};
+
 function createBinding(x) { return new Binding(x) }
 
-function bindToNode(n, key, binding) {
-  objAssign(binding, { target: n, key: key });
+function bindToNode(n, key, subkey, binding) {
+  let bindingUpdateFn = Binding.specialUpdateFnsByKey[key];
+
+  objAssign(binding, { target: n, key: key, subkey: subkey });
+  if (bindingUpdateFn) { binding.update = bindingUpdateFn }
+
   (n.bindings = n.bindings || []).push(binding);
 }
 
@@ -64,7 +147,7 @@ function createElement(type) {
 
     // Store Bindings on element.
     if (v instanceof Binding) {
-      bindToNode(el, k, v);
+      bindToNode(el, k, null, v);
       continue;
     }
 
@@ -80,7 +163,7 @@ function createElement(type) {
 
           // Store Bindings on element.
           if (v2 instanceof Binding) {
-            bindToNode(el, k, v2);
+            bindToNode(el, k, null, v2);
             continue;
           }
 
@@ -116,12 +199,12 @@ function createElement(type) {
 
           v2 = v[k2];
 
-          // Wrap class getter functions in Bindings.
+          // Wrap style getter functions in Bindings.
           if (v2 instanceof Function) { v2 = new Binding(v2) }
 
           // Store Bindings on element.
           if (v2 instanceof Binding) {
-            bindToNode(el, 'style.' + k2, v2);
+            bindToNode(el, 'style', k2, v2);
             continue;
           }
 
@@ -157,27 +240,72 @@ function createComment(text) {
   return document.createComment(text ? ' ' + text + ' ' : ' ');
 }
 
-function createAnchor(text, bindingProps) {
+function createBoundComment(text, bindingProps) {
   let c = createComment(text);
   c.bindings = [new Binding(bindingProps)];
   return c;
 }
 
 function createIfAnchor(predFn, thenNode, elseNode) {
-  return createAnchor('if anchor', {
+  return createBoundComment('if anchor', {
     get: predFn,
     thenNode: thenNode,
-    elseNode: elseNode
+    elseNode: elseNode,
+    update: ifAnchorBindingUpdate
   });
 }
 
+function ifAnchorBindingUpdate() {
+  let i, n, parentEl, nAnchor = this.target, newValue = Boolean(this.get());
+
+  if (this.lastValue === undefined || newValue !== this.lastValue) {
+    parentEl = nAnchor.parentElement;
+
+    if (parentEl) {
+      for (let n of nAnchor.anchoredNodes || []) {
+        exports.remove(n); // FIXME
+      }
+
+      nAnchor.anchoredNodes = [];
+
+      let nNew = newValue ? binding.thenNode : binding.elseNode;
+
+      if (nNew) {
+        let nCursor = nAnchor;
+
+        for (let n of Array.isArray(nNew) ? nNew : [nNew]) {
+          if (!(n instanceof Node)) {
+            n = document.createTextNode(n);
+          }
+
+          parentEl.insertBefore(n, nCursor.nextSibling);
+          nAnchor.anchoredNodes.push(n);
+
+          nCursor = n;
+
+          for (let nAnchored of n.anchoredNodes || []) {
+            parentEl.insertBefore(nAnchored, nCursor.nextSibling);
+            nCursor = nAnchored;
+          }
+        }
+      }
+    }
+  }
+
+  binding.lastValue = newValue;
+}
+
 function createMapAnchor(getFn, mapFn) {
-  return createAnchor('map anchor', { get: getFn, map: mapFn });
+  return createBoundComment('map anchor', {
+    get: getFn,
+    map: mapFn,
+    update: mapAnchorUpdate
+  });
 }
 
 function createTextNode(getFn) {
   let n = document.createTextNode('');
-  n.bindings = [new Binding(getFn)];
+  n.bindings = [new Binding({ get: getFn, update: textNodeUpdate })];
   return n;
 }
 
