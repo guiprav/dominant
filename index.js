@@ -66,10 +66,12 @@ function Binding(x) {
 
 // Most prop bindings can be updated in a unified fashion:
 Binding.prototype.update = function() {
-  let el = this.target, newValue = this.get();
+  let newValue = this.get();
 
   // If the value hasn't changed, do nothing.
   if (newValue === this.lastValue) { return }
+
+  let el = this.target;
 
   // aria-*, data-*, and SVG element props need to be managed as attributes.
   if (ariaDataRegExp.test(this.key) || svgNsRegExp.test(el.namespaceURI)) {
@@ -180,10 +182,9 @@ function bindToNode(n, key, subkey, binding) {
 }
 
 function createElement(type) {
-  let el, evName, i, k, k2, v, v2;
+  let el, evName, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
 
-  let rest = [].slice.call(arguments, 1);
-
+  // If second arg is nullish or a plain object, it's the props arg.
   let props = nullish(rest[0]) ||
     (rest[0] && rest[0].constructor === Object) ? rest.shift() : {};
 
@@ -226,7 +227,7 @@ function createElement(type) {
     // Wrap any other function props in Bindings.
     if (v instanceof Function) { v = new Binding(v) }
 
-    // Store Bindings on element.
+    // Bind Bindings to element.
     if (v instanceof Binding) {
       bindToNode(el, k, null, v);
       continue;
@@ -236,34 +237,29 @@ function createElement(type) {
     if (k === 'class') {
       // Special handling for arrays.
       if (Array.isArray(v)) {
+        getters = [];
+
         for (i = 0; i < v.length; i++) {
           v2 = v[i];
 
-          // Wrap class getter functions in Bindings.
-          if (typeof v2 === 'function') { v2 = new Binding(v2) }
+          // Collect class getter functions.
+          if (typeof v2 === 'function') { getters.push(v2); continue }
 
-          // Store Bindings on element.
-          if (v2 instanceof Binding) {
-            bindToNode(el, k, null, v2);
-            continue;
-          }
+          // Bind Bindings to element.
+          if (v2 instanceof Binding) { bindToNode(el, k, null, v2); continue }
 
-          // Ignore falsy values.
-          if (!v2) { continue }
-
-          // Convert remaining values to strings and statically add them to the
-          // element.
+          // Normalize remaining values and statically add them to the element.
           el.classList.add.apply(el.classList, normalizeClasses(v2));
         }
+
+        // Wrap getters (if any) in a Binding instance and bind to element.
+        if (getters.length) { bindToNode(el, k, null, new Binding(getters)) }
 
         continue;
       }
 
-      // Ignore falsy values.
-      if (!v) { continue }
-
-      // Otherwise it's a string or something convertible into string.
-      el.className = v;
+      // Normalize values and statically add them to the element.
+      el.classList.add.apply(el.classList, normalizeClasses(v));
 
       continue;
     }
@@ -280,7 +276,7 @@ function createElement(type) {
           // Wrap style getter functions in Bindings.
           if (v2 instanceof Function) { v2 = new Binding(v2) }
 
-          // Store Bindings on element.
+          // Bind Bindings to element.
           if (v2 instanceof Binding) {
             bindToNode(el, 'style', k2, v2);
             continue;
@@ -293,13 +289,13 @@ function createElement(type) {
         continue;
       }
 
-      // Otherwise it's a string or something convertible into string.
+      // Otherwise it's a string or something convertible to string.
       el.style = v;
 
       continue;
     }
 
-    // All other props.
+    // All else are (static) regular DOM element properties.
     el[k] = v;
   }
 
@@ -323,48 +319,52 @@ function createBoundComment(text, bindingProps) {
   return c;
 }
 
-function createIfAnchor(predFn, thenNode, elseNode) {
+function createIfAnchor(predFn, thenNodes, elseNodes) {
   return createBoundComment('if anchor', {
     get: predFn,
-    thenNode: thenNode,
-    elseNode: elseNode,
+    thenNodes: thenNodes,
+    elseNodes: elseNodes,
     update: ifAnchorBindingUpdate
   });
 }
 
 function ifAnchorBindingUpdate() {
-  let i, n, parentEl;
+  let i, n;
   let nAnchor = this.target, newValue = Boolean(this.get()), nNew, nCursor;
 
-  if (newValue !== this.lastValue || this.lastValue === undefined) {
-    parentEl = nAnchor.parentElement;
+  // If the value hasn't changed, do nothing.
+  if (newValue === this.lastValue) { return }
 
-    for (i = 0; i < (nAnchor.anchoredNodes || []).length; i++) {
+  let parentEl = nAnchor.parentElement;
+
+  // Remove currently anchored nodes (if any).
+  if (nAnchor.anchoredNodes && n.anchoredNodes.length) {
+    for (i = 0; i < nAnchor.anchoredNodes.length; i++) {
       removeWithAnchoredNodes(nAnchor.anchoredNodes[i]);
     }
 
     nAnchor.anchoredNodes = [];
+  }
 
-    if (!parentEl) { return }
+  nNew = newValue ? this.thenNodes : this.elseNodes;
 
-    nNew = newValue ? this.thenNode : this.elseNode;
+  // Append new nodes (if any) after anchor and store them as anchored nodes.
+  if (nNew) {
+    nCursor = nAnchor;
+    nNew = Array.isArray(nNew) ? nNew : [nNew];
 
-    if (nNew) {
-      nCursor = nAnchor;
-      nNew = Array.isArray(nNew) ? nNew : [nNew];
+    for (i = 0; i < nNew.length; i++) {
+      n = appendableNode(nNew[i]);
+      if (!n) { continue }
 
-      for (i = 0; i < nNew.length; i++) {
-        n = appendableNode(nNew[i]);
-        if (!n) { continue }
+      parentEl.insertBefore(n, nCursor.nextSibling);
+      nAnchor.anchoredNodes.push(n);
 
-        parentEl.insertBefore(n, nCursor.nextSibling);
-        nAnchor.anchoredNodes.push(n);
-
-        nCursor = n;
-      }
+      nCursor = n;
     }
   }
 
+  // Remember updated value.
   this.lastValue = newValue;
 }
 
@@ -411,11 +411,7 @@ function processMutations(muts, observer, di) {
   di.update = di.update || update;
 
   let i, j, mut, n;
-
-  let body = document.body;
-
-  let newNodes = [];
-  let orphanedNodes = [];
+  let newNodes = [], orphanedNodes = [];
 
   // Collect newNodes.
   for (i = 0; i < muts.length; i++) {
