@@ -377,6 +377,76 @@ function createMapAnchor(getFn, mapFn) {
 }
 
 function mapAnchorBindingUpdate() {
+  let self = this, i, iNew, iLast, metaNew, metaLast, n, xNew, xLast;
+  let nAnchor = self.target, parentEl = nAnchor.parentElement, tail, updatedNodes;
+  let newArray = [].slice.call(self.get() || []);
+
+  self.lastArray = self.lastArray || [];
+  self.lastNodes = self.lastNodes || [];
+
+  let valueMap = new Map();
+
+  for (i = 0; i < Math.max(lastArray.length, newArray.length); i++) {
+	  xLast = lastArray[i];
+    xNew = newArray[i];
+
+    if (xLast === xNew) {
+      valueMap.set(xLast, { iLast: i, iNew: i, n: lastNodes[i] });
+      continue;
+    }
+
+    if (i < lastArray.length) {
+      metaLast = objAssign({}, valueMap.get(xLast) || {});
+      valueMap.set(xLast, objAssign(metaLast, { iLast: i, n: lastNodes[i] }));
+    }
+
+    if (i < newArray.length) {
+      metaNew = objAssign({}, valueMap.get(xNew) || {});
+      valueMap.set(xNew, objAssign(metaNew, { iNew: i }));
+    }
+  }
+
+  tail = lastNodes.length
+    ? lastNodes[lastNodes.length - 1].nextSibling
+    : nAnchor.nextSibling;
+
+  updatedNodes = [].slice.call(lastNodes);
+
+  valueMap.forEach(function(meta, x) {
+    let n2, nextSibling = updatedNodes[meta.iNew] || tail;
+    n = meta.n;
+
+    if (!n) {
+      n = appendableNode(self.fn(x));
+
+      parentEl.insertBefore(n, nextSibling);
+      updatedNodes.splice(iNew, 0, n);
+
+      continue;
+    }
+
+    if (iNew === undefined) {
+      n.remove();
+      updatedNodes.splice(updatedNodes.indexOf(n), 1);
+
+      continue;
+    }
+
+    if (iLast !== iNew && n !== nextSibling) {
+      parentEl.insertBefore(n, nextSibling);
+
+      updatedNodes = [];
+
+      for (n2 = nAnchor.nextSibling; n2 !== tail; n2 = n2.nextSibling) {
+        updatedNodes.push(n2);
+      }
+    }
+  });
+
+  nAnchor.anchoredNodes = [].slice.call(updatedNodes);
+
+  self.lastArray = newArray;
+  self.lastNodes = updatedNodes;
 }
 
 function createTextNode(getFn) {
@@ -450,26 +520,33 @@ function processMutations(muts, observer, di) {
 
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
-function update(n, di) {
+function update(di) {
   di = di || {};
   di.boundNodes = di.boundNodes || [];
+  di.updateNode = di.updateNode || updateNode;
+
+  let i;
+
+  for (i = 0; i < di.boundNodes.length; i++) {
+    di.updateNode(di.boundNodes[i], di);
+  }
+}
+
+function updateNode(n, di) {
+  di = di || {};
   di.console = di.console || console;
 
   let i, b;
 
-  // When a node is supplied, update all its bindings, catch and log errors.
-  if (n) {
-    for (i = 0; i < n.bindings.length; i++) {
-      b = n.bindings[i];
-      try { b.update() }
-      catch (e) { di.console.error(e, 'in', n, b) }
-    }
+  // n.parentElement is a workaround for IE11's Node#contains not working on
+  // non-Element nodes.
+  if (!document.contains(n.parentElement)) { return }
 
-    return;
+  for (i = 0; i < n.bindings.length; i++) {
+    b = n.bindings[i];
+    try { b.update() }
+    catch (e) { di.console.error(e, 'in', n, b) }
   }
-
-  // Otherwise we apply update (this function) on all boundNodes.
-  for (i = 0; i < di.boundNodes.length; i++) { update(di.boundNodes[i], di) }
 }
 
 objAssign(exports, {
@@ -487,7 +564,8 @@ objAssign(exports, {
   boundNodes: boundNodes,
 
   resolve: resolve,
-  update: update
+  update: update,
+  updateNode: updateNode
 });
 
 // IE11 helpers:
