@@ -136,23 +136,23 @@ Binding.specialUpdateFnsByKey = {
   },
 
   value: function valueBindingUpdate() {
-    let newValue;
+    let self = this, newValue;
 
     // On first update, lazily creates event handlers for tracking input value
     // changes.
-    if (!this.setHandler) {
-      this.target.addEventListener('keyup', this.setHandler = function(ev) {
+    if (!self.setHandler) {
+      self.target.addEventListener('keyup', self.setHandler = function(ev) {
         let x = ev.target.value;
-        this.lastValue = this.set ? this.set(x) : x;
+        self.lastValue = self.set ? self.set(x) : x;
 
-        // Calling this.set inherently changes application state, so we may
+        // Calling self.set inherently changes application state, so we may
         // need to update other bindings elsewhere that depend on it.
-        this.set && update();
+        self.set && update();
       });
     }
 
-    if (this.get) {
-      newValue = this.get();
+    if (self.get) {
+      newValue = self.get();
 
       // Convert nullish and boolean values to empty strings. Cast everything
       // else to string.
@@ -160,10 +160,10 @@ Binding.specialUpdateFnsByKey = {
       else { newValue = String(newValue) }
 
       // If the value hasn't changed, do nothing.
-      if (newValue === this.lastValue) { return }
+      if (newValue === self.lastValue) { return }
 
       // Update element and remember updated value.
-      this.lastValue = this.target.value = newValue;
+      self.lastValue = self.target.value = newValue;
     }
   }
 };
@@ -315,7 +315,7 @@ function createComment(text) {
 
 function createBoundComment(text, bindingProps) {
   let c = createComment(text);
-  c.bindings = [new Binding(bindingProps)];
+  c.bindings = [new Binding(objAssign(bindingProps, { target: c }))];
   return c;
 }
 
@@ -377,7 +377,7 @@ function createMapAnchor(getFn, mapFn) {
 }
 
 function mapAnchorBindingUpdate() {
-  let self = this, i, iNew, iLast, metaNew, metaLast, n, xNew, xLast;
+  let self = this, i, metaNew, metaLast, n, xNew, xLast;
   let nAnchor = self.target, parentEl = nAnchor.parentElement, tail, updatedNodes;
   let newArray = [].slice.call(self.get() || []);
 
@@ -386,18 +386,21 @@ function mapAnchorBindingUpdate() {
 
   let valueMap = new Map();
 
-  for (i = 0; i < Math.max(lastArray.length, newArray.length); i++) {
-	  xLast = lastArray[i];
+  for (i = 0; i < Math.max(self.lastArray.length, newArray.length); i++) {
+    xLast = self.lastArray[i];
     xNew = newArray[i];
 
     if (xLast === xNew) {
-      valueMap.set(xLast, { iLast: i, iNew: i, n: lastNodes[i] });
+      valueMap.set(xLast, { iLast: i, iNew: i, n: self.lastNodes[i] });
       continue;
     }
 
-    if (i < lastArray.length) {
+    if (i < self.lastArray.length) {
       metaLast = objAssign({}, valueMap.get(xLast) || {});
-      valueMap.set(xLast, objAssign(metaLast, { iLast: i, n: lastNodes[i] }));
+
+      valueMap.set(xLast, objAssign(metaLast, {
+        iLast: i, n: self.lastNodes[i]
+      }));
     }
 
     if (i < newArray.length) {
@@ -406,33 +409,33 @@ function mapAnchorBindingUpdate() {
     }
   }
 
-  tail = lastNodes.length
-    ? lastNodes[lastNodes.length - 1].nextSibling
+  tail = self.lastNodes.length
+    ? self.lastNodes[self.lastNodes.length - 1].nextSibling
     : nAnchor.nextSibling;
 
-  updatedNodes = [].slice.call(lastNodes);
+  updatedNodes = [].slice.call(self.lastNodes);
 
   valueMap.forEach(function(meta, x) {
     let n2, nextSibling = updatedNodes[meta.iNew] || tail;
     n = meta.n;
 
     if (!n) {
-      n = appendableNode(self.fn(x));
+      n = appendableNode(self.map(x));
 
       parentEl.insertBefore(n, nextSibling);
-      updatedNodes.splice(iNew, 0, n);
+      updatedNodes.splice(meta.iNew, 0, n);
 
-      continue;
+      return;
     }
 
-    if (iNew === undefined) {
+    if (meta.iNew === undefined) {
       n.remove();
       updatedNodes.splice(updatedNodes.indexOf(n), 1);
 
-      continue;
+      return;
     }
 
-    if (iLast !== iNew && n !== nextSibling) {
+    if (meta.iLast !== meta.iNew && n !== nextSibling) {
       parentEl.insertBefore(n, nextSibling);
 
       updatedNodes = [];
@@ -451,8 +454,29 @@ function mapAnchorBindingUpdate() {
 
 function createTextNode(getFn) {
   let n = document.createTextNode('');
-  n.bindings = [new Binding({ get: getFn, update: textNodeUpdate })];
+
+  n.bindings = [new Binding({
+    get: getFn,
+    update: textNodeBindingUpdate,
+    target: n
+  })];
+
   return n;
+}
+
+function textNodeBindingUpdate() {
+  let newValue = this.get();
+
+  // Convert nullish and boolean values to empty strings. Cast everything
+  // else to string.
+  if (nullish(newValue) || typeof newValue === 'boolean') { newValue = '' }
+  else { newValue = String(newValue) }
+
+  // If the value hasn't changed, do nothing.
+  if (newValue === this.lastValue) { return }
+
+  // Update node and remember updated value.
+  this.lastValue = this.target.textContent = newValue;
 }
 
 // TODO: Workaround for IE11's broken TreeWalker.
@@ -518,11 +542,16 @@ function processMutations(muts, observer, di) {
   });
 }
 
+let observer = typeof MutationObserver !== 'undefined' &&
+  new MutationObserver(processMutations);
+
+observer && observer.observe(document, { childList: true, subtree: true });
+
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
 function update(di) {
   di = di || {};
-  di.boundNodes = di.boundNodes || [];
+  di.boundNodes = di.boundNodes || boundNodes;
   di.updateNode = di.updateNode || updateNode;
 
   let i;
@@ -545,7 +574,10 @@ function updateNode(n, di) {
   for (i = 0; i < n.bindings.length; i++) {
     b = n.bindings[i];
     try { b.update() }
-    catch (e) { di.console.error(e, 'in', n, b) }
+    catch (e) {
+      di.console.error(e);
+      di.console.error('in', b);
+    }
   }
 }
 
