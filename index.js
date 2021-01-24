@@ -98,7 +98,7 @@ Binding.specialUpdateFnsByKey = {
   class: function classBindingUpdate() {
     // Supports (nested) array/non-array class value getters.
     let i, x, el = this.target, newValue = Array.isArray(this.get)
-      ? flatMap(binding.get, function(x) { return x() })
+      ? flatMap(this.get, function(x) { return x() })
       : this.get();
 
     newValue = normalizeClasses(newValue);
@@ -114,7 +114,7 @@ Binding.specialUpdateFnsByKey = {
     // Added classes in newValue but not in lastValue.
     for (i = 0; i < newValue.length; i++) {
       x = newValue[i];
-      if (lastValue.indexOf(x) === -1) { el.classList.add(x) }
+      if (this.lastValue.indexOf(x) === -1) { el.classList.add(x) }
     }
 
     // Remember updated value.
@@ -217,9 +217,17 @@ function createElement(type) {
     v = props[k];
 
     // Add on* props as event listeners.
-    if (k.indexOf('on') === 0) {
+    if (k.indexOf('on') === 0 && v) {
       evName = k.replace(/^on:?/, '').toLowerCase();
-      el.addEventListener(evName, v);
+
+      el.addEventListener(evName, (function(v, ev) {
+        var ret = v(ev);
+        d.update();
+
+        if (ret && typeof ret.then === 'function') {
+          ret.then(function() { d.update() });
+        }
+      }).bind(null, v));
 
       continue;
     }
@@ -338,11 +346,13 @@ function ifAnchorBindingUpdate() {
   let parentEl = nAnchor.parentElement;
 
   // Remove currently anchored nodes (if any).
-  if (nAnchor.anchoredNodes && n.anchoredNodes.length) {
+  if (nAnchor.anchoredNodes && nAnchor.anchoredNodes.length) {
     for (i = 0; i < nAnchor.anchoredNodes.length; i++) {
       removeWithAnchoredNodes(nAnchor.anchoredNodes[i]);
     }
+  }
 
+  if (!nAnchor.anchoredNodes || nAnchor.anchoredNodes.length) {
     nAnchor.anchoredNodes = [];
   }
 
@@ -489,7 +499,7 @@ function forEachNodeWithBindings(ns, cb) {
     n.bindings && cb(n);
 
     walker = document.createTreeWalker(
-      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT,
+      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT,
     );
 
     while (walker.nextNode()) {
@@ -553,11 +563,18 @@ function update(di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
   di.updateNode = di.updateNode || updateNode;
+  di.evListeners = di.evListeners || evListeners;
+  di.console = di.console || console;
 
   let i;
 
   for (i = 0; i < di.boundNodes.length; i++) {
     di.updateNode(di.boundNodes[i], di);
+  }
+
+  for (i = 0; i < di.evListeners.update.length; i++) {
+    try { di.evListeners.update[i]() }
+    catch (e) { di.console.error(e) }
   }
 }
 
@@ -581,6 +598,15 @@ function updateNode(n, di) {
   }
 }
 
+let evListeners = { update: [] };
+
+function addEventListener(evName, fn) { evListeners[evName].push(fn) }
+
+function removeEventListener(evName, fn) {
+  var i = evListeners[evName].indexOf(fn);
+  if (i !== -1) { evListeners[evName].splice(i, 1) }
+}
+
 objAssign(exports, {
   Binding: Binding,
   binding: createBinding,
@@ -594,6 +620,9 @@ objAssign(exports, {
 
   processMutations: processMutations,
   boundNodes: boundNodes,
+
+  on: addEventListener,
+  off: removeEventListener,
 
   resolve: resolve,
   update: update,
