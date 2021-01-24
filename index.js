@@ -5,6 +5,8 @@ let boundNodes = [];
 let ariaDataRegExp = /^(aria|data)-/;
 let svgNsRegExp = /\/svg$/;
 let wsRegExp = / |\r|\n/;
+let onAttachRegExp = /^on:?attach$/i
+let onDetachRegExp = /^on:?detach$/i
 
 function nullish(x) { return x === undefined || x === null }
 
@@ -220,6 +222,11 @@ function createElement(type) {
     if (k.indexOf('on') === 0 && v) {
       evName = k.replace(/^on:?/, '').toLowerCase();
 
+      if (evName === 'attach' || evName === 'detach') {
+        bindToNode(el, k, null, d.binding({ update: null, handler: v }));
+        continue;
+      }
+
       el.addEventListener(evName, (function(v, ev) {
         var ret = v(ev);
         d.update();
@@ -425,12 +432,15 @@ function mapAnchorBindingUpdate() {
 
   updatedNodes = [].slice.call(self.lastNodes);
 
+  i = -1;
   valueMap.forEach(function(meta, x) {
     let n2, nextSibling = updatedNodes[meta.iNew] || tail;
+
+    i++;
     n = meta.n;
 
     if (!n) {
-      n = appendableNode(self.map(x));
+      n = appendableNode(self.map(x, i));
 
       parentEl.insertBefore(n, nextSibling);
       updatedNodes.splice(meta.iNew, 0, n);
@@ -514,7 +524,7 @@ function processMutations(muts, observer, di) {
   di.boundNodes = di.boundNodes || boundNodes;
   di.update = di.update || update;
 
-  let i, j, mut, n;
+  let i, j, mut, n, b;
   let newNodes = [], orphanedNodes = [];
 
   // Collect newNodes.
@@ -540,13 +550,37 @@ function processMutations(muts, observer, di) {
   // Recursively remove boundNodes collected in the orphanedNodes array.
   forEachNodeWithBindings(orphanedNodes, function(n) {
     i = di.boundNodes.indexOf(n);
-    if (i !== -1) { di.boundNodes.splice(i, 1) }
+
+    if (i !== -1) {
+      di.boundNodes.splice(i, 1);
+
+      for (i = 0; i < n.bindings.length; i++) {
+        b = n.bindings[i];
+
+        if (onDetachRegExp.test(b.key)) {
+          try { b.handler(n) }
+          catch (e) { di.console.error(e) }
+          break;
+        }
+      }
+    }
   });
 
   // Recursively add boundNodes collected in the newNodes array.
   forEachNodeWithBindings(newNodes, function(n) {
     if (di.boundNodes.indexOf(n) === -1) {
       di.boundNodes.push(n);
+
+      for (i = 0; i < n.bindings.length; i++) {
+        b = n.bindings[i];
+
+        if (onAttachRegExp.test(b.key)) {
+          try { b.handler(n) }
+          catch (e) { di.console.error(e) }
+          break;
+        }
+      }
+
       di.update(n);
     }
   });
@@ -590,7 +624,7 @@ function updateNode(n, di) {
 
   for (i = 0; i < n.bindings.length; i++) {
     b = n.bindings[i];
-    try { b.update() }
+    try { b.update && b.update() }
     catch (e) {
       di.console.error(e);
       di.console.error('in', b);
