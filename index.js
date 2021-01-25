@@ -395,23 +395,37 @@ function createMapAnchor(getFn, mapFn) {
 
 function mapAnchorBindingUpdate() {
   let self = this, i, metaNew, metaLast, n, xNew, xLast;
-  let nAnchor = self.target, parentEl = nAnchor.parentElement, tail, updatedNodes;
+  let nAnchor = self.target, parentEl = nAnchor.parentElement;
+  var tail, updatedNodes;
   let newArray = [].slice.call(self.get() || []);
 
+  // Initialize to empty arrays if this is the first execution.
   self.lastArray = self.lastArray || [];
   self.lastNodes = self.lastNodes || [];
 
+  // valueMap maps array values (both from newArray and lastArray) to metadata
+  // objects: if the value is present in lastArray, meta.iLast is its index
+  // there. If the value is present in newArray, meta.iNew is its index there.
+  // If the value isn't new, meta.n will be its associated DOM node from
+  // lastNodes.
   let valueMap = new Map();
 
+  // Iterate from 0 to lastArray.length or newArray.length, whichever is
+  // greater.
   for (i = 0; i < Math.max(self.lastArray.length, newArray.length); i++) {
+    // Get lastArray/newArray values for the current index.
     xLast = self.lastArray[i];
     xNew = newArray[i];
 
+    // If the lastArray[i] === newArray[i], then this is an existing value
+    // that was not reordered, so iLast/iNew are the same.
     if (xLast === xNew) {
       valueMap.set(xLast, { iLast: i, iNew: i, n: self.lastNodes[i] });
       continue;
     }
 
+    // If the current index is within lastArray bounds, we set its iLast/n
+    // metadata.
     if (i < self.lastArray.length) {
       metaLast = objAssign({}, valueMap.get(xLast) || {});
 
@@ -420,25 +434,42 @@ function mapAnchorBindingUpdate() {
       }));
     }
 
+    // If the current index is within newArray bounds, we set its iNew metadata.
     if (i < newArray.length) {
       metaNew = objAssign({}, valueMap.get(xNew) || {});
       valueMap.set(xNew, objAssign(metaNew, { iNew: i }));
     }
   }
 
+  // tail is a reference to the last existing node's nextSibling (which may be
+  // null, in which case inserting before it will have the effect of appending
+  // elements to the end of parentEl). It won't be null if d.map is followed by
+  // other nodes inside parentEl, so inserting before them has the effect of
+  // inserting nodes after all mapped nodes, but before any next siblings.
   tail = self.lastNodes.length
     ? self.lastNodes[self.lastNodes.length - 1].nextSibling
     : nAnchor.nextSibling;
 
+  // We start by making a shallow copy of lastNodes so we can make changes to
+  // the copy without touching lastNodes itself (in case of errors, checking
+  // lastNodes could help debugging).
   updatedNodes = [].slice.call(self.lastNodes);
 
+  // Map#forEach doesn't inform the callback of the current iteration index,
+  // so we count it ourselves.
   i = -1;
   valueMap.forEach(function(meta, x) {
+    // If meta.iNew is within updatedNodes bounds, we'll want to insert the
+    // node associated with this value (x) just before whatever node is
+    // currently on index meta.iNew. Otherwise, the new index overflows
+    // updatedNodes and as such should be inserted at tail position.
     let n2, nextSibling = updatedNodes[meta.iNew] || tail;
 
     i++;
     n = meta.n;
 
+    // If we haven't created a node for this value yet, we do so, insert it
+    // at the right spot, and update updatedNodes to reflect these changes.
     if (!n) {
       n = appendableNode(self.map(x, i));
 
@@ -448,6 +479,8 @@ function mapAnchorBindingUpdate() {
       return;
     }
 
+    // If meta.iNew is undefined, that means the value is no longer present in
+    // newArray and should therefore be removed from parentEl and updatedNodes.
     if (meta.iNew === undefined) {
       n.remove();
       updatedNodes.splice(updatedNodes.indexOf(n), 1);
@@ -455,19 +488,20 @@ function mapAnchorBindingUpdate() {
       return;
     }
 
+    // If meta.iLast !== meta.iNew, it means the value is present in both
+    // arrays, but changed position. In some cases it may be that reordering
+    // other nodes could have caused it to already fall into position by chance
+    // in the document, in which case n === nextSibling and there's nothing
+    // to be done.
     if (meta.iLast !== meta.iNew && n !== nextSibling) {
       parentEl.insertBefore(n, nextSibling);
-
-      updatedNodes = [];
-
-      for (n2 = nAnchor.nextSibling; n2 !== tail; n2 = n2.nextSibling) {
-        updatedNodes.push(n2);
-      }
+      updatedNodes.splice(meta.iNew, 0, updatedNodes.splice(meta.iLast, 1)[0]);
     }
   });
 
   nAnchor.anchoredNodes = [].slice.call(updatedNodes);
 
+  // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
   self.lastNodes = updatedNodes;
 }
