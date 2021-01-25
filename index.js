@@ -190,7 +190,7 @@ function createElement(type) {
   let props = nullish(rest[0]) ||
     (rest[0] && rest[0].constructor === Object) ? rest.shift() : {};
 
-  // Flatten children arrays.
+  // Flatten child arrays.
   let children = flat(rest, 10);
 
   // If the element type is a function, delegate everything to its implementation.
