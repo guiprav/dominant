@@ -264,7 +264,7 @@ function createElement(type) {
           if (v2 instanceof Binding) { bindToNode(el, k, null, v2); continue }
 
           // Normalize remaining values and statically add them to the element.
-          el.classList.add.apply(el.classList, normalizeClasses(v2));
+          normalizeClasses(v2).forEach(function(x) { el.classList.add(x) });
         }
 
         // Wrap getters (if any) in a Binding instance and bind to element.
@@ -274,7 +274,7 @@ function createElement(type) {
       }
 
       // Normalize values and statically add them to the element.
-      el.classList.add.apply(el.classList, normalizeClasses(v));
+      normalizeClasses(v).forEach(function(x) { el.classList.add(x) });
 
       continue;
     }
