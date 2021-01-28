@@ -533,23 +533,14 @@ function textNodeBindingUpdate() {
   this.lastValue = this.target.textContent = newValue;
 }
 
-// TODO: Workaround for IE11's broken TreeWalker.
 function forEachNodeWithBindings(ns, cb) {
-  let i, n, n2, walker;
+  let queue = [].slice.call(ns), n;
 
-  for (i = 0; i < ns.length; i++) {
-    n = ns[i];
-
+  while (queue.length) {
+    n = queue.shift();
     n.bindings && cb(n);
-
-    walker = document.createTreeWalker(
-      n, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT,
-    );
-
-    while (walker.nextNode()) {
-      n2 = walker.currentNode;
-      n2.bindings && cb(n2);
-    }
+    if (!n.childNodes) { continue }
+    [].unshift.apply(queue, n.childNodes);
   }
 }
 
@@ -557,6 +548,7 @@ function processMutations(muts, observer, di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
   di.update = di.update || update;
+  di.console = di.console || console;
 
   let i, j, mut, n, b;
   let newNodes = [], orphanedNodes = [];
