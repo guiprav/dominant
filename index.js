@@ -44,13 +44,13 @@ function removeWithAnchoredNodes(n) {
 
   if (n.anchoredNodes) {
     for (i = 0; i < n.anchoredNodes.length; i++) {
-      n.anchoredNodes[i].remove();
+      n.anchoredNodes[i].parentNode.removeChild(n.anchoredNodes[i]);
     }
 
     delete n.anchoredNodes;
   }
 
-  n.remove();
+  n.parentNode.removeChild(n);
 }
 
 // All bindings are represented as instances of this class.
@@ -350,7 +350,7 @@ function ifAnchorBindingUpdate() {
   // If the value hasn't changed, do nothing.
   if (newValue === this.lastValue) { return }
 
-  let parentEl = nAnchor.parentElement;
+  let parentEl = nAnchor.parentNode;
 
   // Remove currently anchored nodes (if any).
   if (nAnchor.anchoredNodes && nAnchor.anchoredNodes.length) {
@@ -395,7 +395,7 @@ function createMapAnchor(getFn, mapFn) {
 
 function mapAnchorBindingUpdate() {
   let self = this, i, metaNew, metaLast, n, xNew, xLast;
-  let nAnchor = self.target, parentEl = nAnchor.parentElement;
+  let nAnchor = self.target, parentEl = nAnchor.parentNode;
   var tail, updatedNodes;
   let newArray = [].slice.call(self.get() || []);
 
@@ -482,7 +482,7 @@ function mapAnchorBindingUpdate() {
     // If meta.iNew is undefined, that means the value is no longer present in
     // newArray and should therefore be removed from parentEl and updatedNodes.
     if (meta.iNew === undefined) {
-      n.remove();
+      n.parentNode.removeChild(n);
       updatedNodes.splice(updatedNodes.indexOf(n), 1);
 
       return;
@@ -644,9 +644,9 @@ function updateNode(n, di) {
 
   let i, b;
 
-  // n.parentElement is a workaround for IE11's Node#contains not working on
+  // n.parentNode is a workaround for IE11's Node#contains not working on
   // non-Element nodes.
-  if (!document.contains(n.parentElement)) { return }
+  if (!document.body.contains(n.parentNode)) { return }
 
   for (i = 0; i < n.bindings.length; i++) {
     b = n.bindings[i];
