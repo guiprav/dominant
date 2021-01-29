@@ -418,11 +418,8 @@ function mapAnchorBindingUpdate() {
     xNew = newArray[i];
 
     // If the lastArray[i] === newArray[i], then this is an existing value
-    // that was not reordered, so iLast/iNew are the same.
-    if (xLast === xNew) {
-      valueMap.set(xLast, { iLast: i, iNew: i, n: self.lastNodes[i] });
-      continue;
-    }
+    // that was not reordered, so we skip them.
+    if (xLast === xNew) { continue }
 
     // If the current index is within lastArray bounds, we set its iLast/n
     // metadata.
@@ -455,23 +452,23 @@ function mapAnchorBindingUpdate() {
   // lastNodes could help debugging).
   updatedNodes = [].slice.call(self.lastNodes);
 
-  // Map#forEach doesn't inform the callback of the current iteration index,
-  // so we count it ourselves.
-  i = -1;
   valueMap.forEach(function(meta, x) {
     // If meta.iNew is within updatedNodes bounds, we'll want to insert the
     // node associated with this value (x) just before whatever node is
     // currently on index meta.iNew. Otherwise, the new index overflows
     // updatedNodes and as such should be inserted at tail position.
-    let n2, nextSibling = updatedNodes[meta.iNew] || tail;
+    let nextSibling = updatedNodes[meta.iNew] || tail;
 
-    i++;
     n = meta.n;
 
     // If we haven't created a node for this value yet, we do so, insert it
     // at the right spot, and update updatedNodes to reflect these changes.
     if (!n) {
-      n = appendableNode(self.map(x, i));
+      // FIXME: If we pass indices by value here, we'd have to re-render
+      // everytime something moves. Maybe pass an index getter function
+      // instead that will can be subsequently invoked to get the most
+      // up-to-date index for that value?
+      n = appendableNode(self.map(x, meta.iNew));
 
       parentEl.insertBefore(n, nextSibling);
       updatedNodes.splice(meta.iNew, 0, n);
