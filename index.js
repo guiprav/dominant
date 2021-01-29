@@ -616,7 +616,16 @@ observer && observer.observe(document, { childList: true, subtree: true });
 
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
-function update(di) {
+function update() {
+  if (update.frame) { return }
+
+  update.frame = requestAnimationFrame(function() {
+    updateImmediately();
+    update.frame = null;
+  });
+}
+
+function updateImmediately(di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
   di.updateNode = di.updateNode || updateNode;
@@ -683,6 +692,7 @@ objAssign(exports, {
 
   resolve: resolve,
   update: update,
+  updateImmediately: updateImmediately,
   updateNode: updateNode
 });
 
