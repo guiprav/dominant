@@ -624,7 +624,7 @@ function update() {
   update.frame = requestAnimationFrame(function() {
     let i;
 
-    updateImmediately();
+    updateSync();
     update.frame = null;
 
     for (i = 0; i < update.promiseCallbacks.length; i++) {
@@ -640,7 +640,7 @@ function update() {
 
 update.promiseCallbacks = [];
 
-function updateImmediately(di) {
+function updateSync(di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
   di.updateNode = di.updateNode || updateNode;
@@ -707,7 +707,7 @@ objAssign(exports, {
 
   resolve: resolve,
   update: update,
-  updateImmediately: updateImmediately,
+  updateSync: updateSync,
   updateNode: updateNode
 });
 
