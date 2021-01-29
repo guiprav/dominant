@@ -223,16 +223,16 @@ function createElement(type) {
       evName = k.replace(/^on:?/, '').toLowerCase();
 
       if (evName === 'attach' || evName === 'detach') {
-        bindToNode(el, k, null, d.binding({ update: null, handler: v }));
+        bindToNode(el, k, null, createBinding({ update: null, handler: v }));
         continue;
       }
 
       el.addEventListener(evName, (function(v, ev) {
         var ret = v(ev);
-        d.update();
+        update();
 
         if (ret && typeof ret.then === 'function') {
-          ret.then(function() { d.update() });
+          ret.then(function() { update() });
         }
       }).bind(null, v));
 
