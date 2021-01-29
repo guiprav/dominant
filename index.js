@@ -617,13 +617,28 @@ observer && observer.observe(document, { childList: true, subtree: true });
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
 function update() {
-  if (update.frame) { return }
+  let p = window.Promise && new Promise(function(cb) { update.promiseCallbacks.push(cb) });
+
+  if (update.frame) { return p }
 
   update.frame = requestAnimationFrame(function() {
+    let i;
+
     updateImmediately();
     update.frame = null;
+
+    for (i = 0; i < update.promiseCallbacks.length; i++) {
+      try { update.promiseCallbacks[i]() }
+      catch (e) { console.error(e) }
+    }
+
+    update.promiseCallbacks.length = 0;
   });
+
+  return p;
 }
+
+update.promiseCallbacks = [];
 
 function updateImmediately(di) {
   di = di || {};
