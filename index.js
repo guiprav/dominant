@@ -211,7 +211,7 @@ function createElement(type) {
   // Otherwise element type is a string representing a tag name, which we create.
   el = type.indexOf('svg:') !== 0
     ? document.createElement(type)
-    : document.createElementNS('http://www.w3.org/2000/svg', el.split(':')[1]);
+    : document.createElementNS('http://www.w3.org/2000/svg', type.split(':')[1]);
 
   // For each prop...
   for (k in props) {
