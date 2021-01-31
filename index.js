@@ -728,6 +728,38 @@ function removeEventListener(evName, fn) {
   if (i !== -1) { evListeners[evName].splice(i, 1) }
 }
 
+let effects = {};
+
+function setEffect(getFn, effectFn) {
+  let id = setEffect.nextId++;
+  let effect = effects[id] = { get: getFn, run: effectFn };
+  let firstValue = getFn();
+
+  effect.run(firstValue);
+  effect.lastValue = shallowClone(firstValue);
+
+  return id;
+}
+
+setEffect.nextId = 1;
+
+function updateEffect(id) {
+  let effect = effects[id], newValue = effect.get();
+
+  if (shallowEq(newValue, effect.lastValue)) { return }
+
+  effect.run(newValue, effect.lastValue);
+  effect.lastValue = shallowClone(newValue);
+}
+
+function clearEffect(id) {
+  delete effects[id];
+}
+
+addEventListener('beforeUpdate', () => {
+  for (let id in effects) { updateEffect(id) }
+});
+
 objAssign(exports, {
   Binding: Binding,
   binding: createBinding,
@@ -750,6 +782,10 @@ objAssign(exports, {
   update: update,
   updateSync: updateSync,
   updateNode: updateNode,
+
+  setEffect: setEffect,
+  updateEffect: updateEffect,
+  clearEffect: clearEffect,
 });
 
 // IE11 helpers:
@@ -773,3 +809,39 @@ function flat(xs, d) {
 }
 
 function flatMap(xs, fn) { return flat(xs.map(fn)) }
+
+function shallowEq(a, b) {
+  let i, k;
+
+  if (a === b) { return true }
+
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) { return false }
+
+    for (i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) { return false }
+    }
+
+    return true;
+  }
+
+  if (typeof a === 'object') {
+    if (typeof b !== 'object') { return false }
+    if (Object.keys(a).length !== Object.keys(b).length) { return false }
+
+    for (k in a) {
+      if (!a.hasOwnProperty(k)) { continue }
+      if (a[k] !== b[k]) { return false }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+function shallowClone(x) {
+  if (Array.isArray(x)) { return [].slice.call(x) }
+  else if (typeof x === 'object') { return objAssign({}, x) }
+  return x;
+}
