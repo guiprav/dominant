@@ -28,7 +28,7 @@ class App {
       <div class="about">
         Dominant 1k Components Demo
         based on InfernoJS 1k Components Demo,
-        itself based on the Glimmer demo by
+        itself based on the Glimmer demo by{' '}
         <a href="http://mlange.io" target="_blank">Michael Lange</a>.
       </div>
     </div>
