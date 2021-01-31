@@ -54,9 +54,6 @@ function removeWithAnchoredNodes(n) {
   n.parentNode.removeChild(n);
 }
 
-// Support for JSX "fragment" syntax.
-function Fragment(props) { return props.children }
-
 // All bindings are represented as instances of this class.
 function Binding(x) {
   // Incorporate all key-values in x when x is an object.
@@ -213,6 +210,9 @@ function bindToNode(n, key, subkey, binding) {
 
   (n.bindings = n.bindings || []).push(binding);
 }
+
+// Support for JSX "fragment" syntax.
+function JsxFragment(props) { return props.children || [] }
 
 function createElement(type) {
   let el, evName, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
@@ -724,10 +724,10 @@ function removeEventListener(evName, fn) {
 }
 
 objAssign(exports, {
-  Fragment: Fragment,
   Binding: Binding,
   binding: createBinding,
 
+  JsxFragment: JsxFragment,
   el: createElement,
   comment: createComment,
 

@@ -24,7 +24,7 @@
         "@babel/plugin-transform-react-jsx",
         {
           "pragma": "d.el",
-          "pragmaFrag": "d.Fragment"
+          "pragmaFrag": "d.JsxFragment"
         }
       ]
     ]
