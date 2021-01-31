@@ -24,7 +24,8 @@
         "@babel/plugin-transform-react-jsx",
         {
           "pragma": "d.el",
-          "pragmaFrag": "d.JsxFragment"
+          "pragmaFrag": "d.JsxFragment",
+          "throwIfNamespace": false
         }
       ]
     ]
@@ -41,8 +42,10 @@
     "babelify": "^10.0.0",
     "browserify": "^17.0.0",
     "chai": "^4.2.0",
+    "d3-scale-chromatic": "^2.0.0",
     "jsdom": "^16.3.0",
     "mocha": "^8.0.1",
+    "perf-monitor": "^0.4.1",
     "sinon": "^9.0.2"
   },
   "publishConfig": {
