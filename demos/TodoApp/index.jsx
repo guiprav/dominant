@@ -28,6 +28,8 @@ class App {
     return this.todos.filter(x => x.completed);
   }
 
+  toggleAll = toggle => this.todos.forEach(x => x.completed = toggle);
+
   showFilters = () =>
     Boolean(this.activeTodos.length && this.completedTodos.length);
 
@@ -60,8 +62,15 @@ class App {
       {d.if(() => this.todos.length, (
         <>
           <main class="main">
-            <input type="checkbox" id="toggle-all" class="toggle-all" />
-            <label for="toggle-all" />
+            <input
+              type="checkbox"
+              id="toggle-all"
+              class="toggle-all"
+              checked={() => !this.activeTodos.length}
+              onChange={ev => this.toggleAll(ev.target.checked)}
+            />
+
+            <label htmlFor="toggle-all" />
 
             <ul class="todo-list">
               {d.map(() => this.filteredTodos(this.filter), x => (
