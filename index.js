@@ -219,10 +219,18 @@ function createElement(type) {
 
   // If second arg is nullish or a plain object, it's the props arg.
   let props = nullish(rest[0]) ||
-    (rest[0] && rest[0].constructor === Object) ? rest.shift() : {};
+    (rest[0] && rest[0].constructor === Object) ? rest.shift() : null;
+
+  // Create one if missing.
+  props = props || {};
+
+  // Detect ambiguity.
+  if (props.children && rest.length) {
+    throw new Error('Ambiguous children parameters');
+  }
 
   // Flatten child arrays.
-  let children = flat(rest, 10);
+  let children = flat(props.children ? arrayify(props.children) : rest, 10);
 
   // If the element type is a function, delegate everything to its implementation.
   if (typeof type === 'function') {
@@ -250,7 +258,7 @@ function createElement(type) {
 
   // For each prop...
   for (k in props) {
-    if (!props.hasOwnProperty(k)) { continue }
+    if (!props.hasOwnProperty(k) || k === 'children') { continue }
     v = props[k];
 
     // Add on* props as event listeners.
@@ -788,27 +796,8 @@ objAssign(exports, {
   clearEffect: clearEffect,
 });
 
-// IE11 helpers:
-function objAssign(a, b) {
-  let k;
-
-  for (k in b) {
-    if (!b.hasOwnProperty(k)) { continue }
-    a[k] = b[k];
-  }
-
-  return a;
-}
-
-function flat(xs, d) {
-  if (d === undefined) { d = 1 }
-
-  return xs.reduce(function(acc, x) {
-    return acc.concat(Array.isArray(x) ? (d > 0 ? flat(x, d - 1) : x) : x);
-  }, []);
-}
-
-function flatMap(xs, fn) { return flat(xs.map(fn)) }
+// General helpers:
+function arrayify(x) { return Array.isArray(x) ? x : [x] }
 
 function shallowEq(a, b) {
   let i, k;
@@ -845,3 +834,25 @@ function shallowClone(x) {
   else if (typeof x === 'object') { return objAssign({}, x) }
   return x;
 }
+
+// IE11 helpers:
+function objAssign(a, b) {
+  let k;
+
+  for (k in b) {
+    if (!b.hasOwnProperty(k)) { continue }
+    a[k] = b[k];
+  }
+
+  return a;
+}
+
+function flat(xs, d) {
+  if (d === undefined) { d = 1 }
+
+  return xs.reduce(function(acc, x) {
+    return acc.concat(Array.isArray(x) ? (d > 0 ? flat(x, d - 1) : x) : x);
+  }, []);
+}
+
+function flatMap(xs, fn) { return flat(xs.map(fn)) }

@@ -4,7 +4,7 @@ class App {
   todos = [];
   filter = 'all';
 
-  onInputKeyUp = ev => {
+  onNewKeyUp = ev => {
     if (ev.key === 'Enter') {
       let value = ev.target.value.trim();
 
@@ -18,6 +18,20 @@ class App {
   };
 
   addTodo(text) { this.todos.push({ text, completed: false }) }
+
+  async editTodo(x) {
+    x.editing = true;
+
+    await d.update();
+    x.editInputEl.select();
+  }
+
+  onEditKeyUp = (ev, x) => {
+    if (ev.key === 'Enter') {
+      x.editing = false;
+      if (!ev.target.value.trim()) { return this.removeTodo(x) }
+    }
+  };
 
   removeTodo(x) {
     let i = this.todos.indexOf(x);
@@ -58,7 +72,7 @@ class App {
 
         <input
           class="new-todo"
-          onKeyUp={this.onInputKeyUp}
+          onKeyUp={this.onNewKeyUp}
           placeholder="What needs to be done?"
         />
       </header>
@@ -78,7 +92,7 @@ class App {
 
             <ul class="todo-list">
               {d.map(() => this.filteredTodos(this.filter), x => (
-                <li class={() => x.completed && 'completed'}>
+                <li class={() => [x.completed && 'completed', x.editing && 'editing']}>
                   <div class="view">
                     <input
                       type="checkbox"
@@ -89,14 +103,22 @@ class App {
                       })}
                     />
 
-                    <label>{d.text(() => x.text)}</label>
+                    <label
+                      onDblClick={() => this.editTodo(x)}
+                      children={d.text(() => x.text)}
+                    />
+
                     <button class="destroy" onClick={() => this.removeTodo(x)} />
                   </div>
 
-                  <input
-                    class="edit"
-                    value={d.binding({ get: () => x.text, set: y => x.text = y })}
-                  />
+                  {x.editInputEl = (
+                    <input
+                      class="edit"
+                      value={d.binding({ get: () => x.text, set: y => x.text = y })}
+                      onKeyUp={ev => this.onEditKeyUp(ev, x)}
+                      onBlur={() => x.editing = false}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
