@@ -4,6 +4,21 @@ class App {
   todos = [];
   filter = 'all';
 
+  onAttach = () => {
+    this.todos = JSON.parse(localStorage.getItem('todos') || '[]');
+
+    this.storeEffectId = d.setEffect(
+      () => JSON.stringify(this.todos.map(x => ({
+        text: x.text,
+        completed: x.completed,
+      }))),
+
+      x => localStorage.setItem('todos', x),
+    );
+  };
+
+  onDetach = () => { d.clearEffect(this.storeEffectId) };
+
   onNewKeyUp = ev => {
     if (ev.key === 'Enter') {
       let value = ev.target.value.trim();
@@ -66,7 +81,12 @@ class App {
   };
 
   render = () => (
-    <div class="todoapp" model={this}>
+    <div
+      model={this}
+      class="todoapp"
+      onAttach={this.onAttach}
+      onDetach={this.onDetach}
+    >
       <header class="header">
         <h1>todos</h1>
 
