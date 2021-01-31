@@ -2,6 +2,7 @@
 
 let boundNodes = [];
 
+let classTypeRegExp = /^class\s/;
 let ariaDataRegExp = /^(aria|data)-/;
 let svgNsRegExp = /\/svg$/;
 let wsRegExp = / |\r|\n/;
@@ -52,6 +53,9 @@ function removeWithAnchoredNodes(n) {
 
   n.parentNode.removeChild(n);
 }
+
+// Support for JSX "fragment" syntax.
+function Fragment(props) { return props.children }
 
 // All bindings are represented as instances of this class.
 function Binding(x) {
@@ -137,6 +141,33 @@ Binding.specialUpdateFnsByKey = {
     this.lastValue = newValue;
   },
 
+  checked: function checkedBindingUpdate() {
+    let self = this, newValue;
+
+    // On first update, lazily creates event handlers for tracking input value
+    // changes.
+    if (!self.setHandler) {
+      self.target.addEventListener('change', self.setHandler = function(ev) {
+        let x = ev.target.checked;
+        self.lastValue = self.set ? self.set(x) : x;
+
+        // Calling self.set inherently changes application state, so we may
+        // need to update other bindings elsewhere that depend on it.
+        self.set && update();
+      });
+    }
+
+    if (self.get) {
+      newValue = Boolean(self.get());
+
+      // If the value hasn't changed, do nothing.
+      if (newValue === self.lastValue) { return }
+
+      // Update element and remember updated value.
+      self.lastValue = self.target.checked = newValue;
+    }
+  },
+
   value: function valueBindingUpdate() {
     let self = this, newValue;
 
@@ -167,7 +198,7 @@ Binding.specialUpdateFnsByKey = {
       // Update element and remember updated value.
       self.lastValue = self.target.value = newValue;
     }
-  }
+  },
 };
 
 function createBinding(x) { return new Binding(x) }
@@ -199,8 +230,12 @@ function createElement(type) {
     props = objAssign({}, props);
     props.children = children;
 
-    // Instantiate and call render if type prototype has a render method.
-    if (type.prototype && type.prototype.render) {
+    // Instantiate and call render if type is a class and/or its prototype has
+    // a render method.
+    if (type.prototype && (
+      typeof type.prototype.render === 'function' ||
+      classTypeRegExp.test(type.toString())
+    )) {
       return new type(props).render();
     }
 
@@ -339,7 +374,7 @@ function createIfAnchor(predFn, thenNodes, elseNodes) {
     get: predFn,
     thenNodes: thenNodes,
     elseNodes: elseNodes,
-    update: ifAnchorBindingUpdate
+    update: ifAnchorBindingUpdate,
   });
 }
 
@@ -389,7 +424,7 @@ function createMapAnchor(getFn, mapFn) {
   return createBoundComment('map anchor', {
     get: getFn,
     map: mapFn,
-    update: mapAnchorBindingUpdate
+    update: mapAnchorBindingUpdate,
   });
 }
 
@@ -509,7 +544,7 @@ function createTextNode(getFn) {
   n.bindings = [new Binding({
     get: getFn,
     update: textNodeBindingUpdate,
-    target: n
+    target: n,
   })];
 
   return n;
@@ -689,6 +724,7 @@ function removeEventListener(evName, fn) {
 }
 
 objAssign(exports, {
+  Fragment: Fragment,
   Binding: Binding,
   binding: createBinding,
 
@@ -708,7 +744,7 @@ objAssign(exports, {
   resolve: resolve,
   update: update,
   updateSync: updateSync,
-  updateNode: updateNode
+  updateNode: updateNode,
 });
 
 // IE11 helpers:

@@ -13,13 +13,32 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "mocha index.spec.js"
+    "test": "mocha index.spec.js",
+    "build": "cd demos; ./build.sh"
+  },
+  "babel": {
+    "plugins": [
+      "@babel/plugin-transform-modules-commonjs",
+      "@babel/plugin-proposal-class-properties",
+      [
+        "@babel/plugin-transform-react-jsx",
+        {
+          "pragma": "d.el",
+          "pragmaFrag": "d.Fragment"
+        }
+      ]
+    ]
   },
   "devDependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-transform-modules-commonjs": "^7.12.1",
+    "@babel/plugin-transform-react-jsx": "^7.12.12",
     "@types/chai": "^4.2.11",
     "@types/jsdom": "^16.2.3",
     "@types/mocha": "^8.0.0",
     "@types/sinon": "^9.0.4",
+    "babelify": "^10.0.0",
     "browserify": "^17.0.0",
     "chai": "^4.2.0",
     "jsdom": "^16.3.0",
