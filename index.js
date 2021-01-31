@@ -684,6 +684,11 @@ function updateSync(di) {
 
   let i;
 
+  for (i = 0; i < di.evListeners.beforeUpdate.length; i++) {
+    try { di.evListeners.beforeUpdate[i]() }
+    catch (e) { di.console.error(e) }
+  }
+
   for (i = 0; i < di.boundNodes.length; i++) {
     di.updateNode(di.boundNodes[i], di);
   }
@@ -714,7 +719,7 @@ function updateNode(n, di) {
   }
 }
 
-let evListeners = { update: [] };
+let evListeners = { beforeUpdate: [], update: [] };
 
 function addEventListener(evName, fn) { evListeners[evName].push(fn) }
 
