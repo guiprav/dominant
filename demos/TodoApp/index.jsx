@@ -6,7 +6,11 @@ class App {
 
   onInputKeyUp = ev => {
     if (ev.key === 'Enter') {
-      this.addTodo(ev.target.value);
+      let value = ev.target.value.trim();
+
+      if (!value) { return }
+
+      this.addTodo(value);
       if (this.filter === 'completed') { this.filter = 'all' }
 
       ev.target.value = '';
@@ -48,7 +52,7 @@ class App {
   };
 
   render = () => (
-    <div class="todoapp">
+    <div class="todoapp" model={this}>
       <header class="header">
         <h1>todos</h1>
 
