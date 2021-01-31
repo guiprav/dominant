@@ -92,7 +92,10 @@ class App {
 
             <ul class="todo-list">
               {d.map(() => this.filteredTodos(this.filter), x => (
-                <li class={() => [x.completed && 'completed', x.editing && 'editing']}>
+                <li class={() => [
+                  x.completed && 'completed',
+                  x.editing && 'editing'
+                ]}>
                   <div class="view">
                     <input
                       type="checkbox"
@@ -108,13 +111,19 @@ class App {
                       children={d.text(() => x.text)}
                     />
 
-                    <button class="destroy" onClick={() => this.removeTodo(x)} />
+                    <button
+                      class="destroy"
+                      onClick={() => this.removeTodo(x)}
+                    />
                   </div>
 
                   {x.editInputEl = (
                     <input
                       class="edit"
-                      value={d.binding({ get: () => x.text, set: y => x.text = y })}
+                      value={d.binding({
+                        get: () => x.text,
+                        set: y => x.text = y,
+                      })}
                       onKeyUp={ev => this.onEditKeyUp(ev, x)}
                       onBlur={() => x.editing = false}
                     />
