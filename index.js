@@ -745,38 +745,6 @@ function removeEventListener(evName, fn) {
   if (i !== -1) { evListeners[evName].splice(i, 1) }
 }
 
-var effects = {};
-
-function setEffect(getFn, effectFn) {
-  var id = setEffect.nextId++;
-  var effect = effects[id] = { get: getFn, run: effectFn };
-  var firstValue = getFn();
-
-  effect.run(firstValue);
-  effect.lastValue = shallowClone(firstValue);
-
-  return id;
-}
-
-setEffect.nextId = 1;
-
-function updateEffect(id) {
-  var effect = effects[id], newValue = effect.get();
-
-  if (shallowEq(newValue, effect.lastValue)) { return }
-
-  effect.run(newValue, effect.lastValue);
-  effect.lastValue = shallowClone(newValue);
-}
-
-function clearEffect(id) {
-  delete effects[id];
-}
-
-addEventListener('beforeUpdate', function() {
-  for (var id in effects) { updateEffect(id) }
-});
-
 objAssign(exports, {
   Binding: Binding,
   binding: createBinding,
@@ -794,15 +762,12 @@ objAssign(exports, {
 
   on: addEventListener,
   off: removeEventListener,
+  evListeners: evListeners,
 
   resolve: resolve,
   update: update,
   updateSync: updateSync,
   updateNode: updateNode,
-
-  setEffect: setEffect,
-  updateEffect: updateEffect,
-  clearEffect: clearEffect,
 });
 
 // General helpers:
