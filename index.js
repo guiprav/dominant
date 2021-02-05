@@ -1,13 +1,13 @@
 'use strict';
 
-let boundNodes = [];
+var boundNodes = [];
 
-let classTypeRegExp = /^class\s/;
-let ariaDataRegExp = /^(aria|data)-/;
-let svgNsRegExp = /\/svg$/;
-let wsRegExp = / |\r|\n/;
-let onAttachRegExp = /^on:?attach$/i
-let onDetachRegExp = /^on:?detach$/i
+var classTypeRegExp = /^class\s/;
+var ariaDataRegExp = /^(aria|data)-/;
+var svgNsRegExp = /\/svg$/;
+var wsRegExp = / |\r|\n/;
+var onAttachRegExp = /^on:?attach$/i
+var onDetachRegExp = /^on:?detach$/i
 
 function nullish(x) { return x === undefined || x === null }
 
@@ -41,7 +41,7 @@ function appendableNode(x) {
 // removed all anchored nodes. This function can be safely used to remove any
 // node, even ones that don't have anchored nodes.
 function removeWithAnchoredNodes(n) {
-  let i;
+  var i;
 
   if (n.anchoredNodes) {
     for (i = 0; i < n.anchoredNodes.length; i++) {
@@ -69,12 +69,12 @@ function Binding(x) {
 
 // Most prop bindings can be updated in a unified fashion:
 Binding.prototype.update = function() {
-  let newValue = this.get();
+  var newValue = this.get();
 
   // If the value hasn't changed, do nothing.
   if (newValue === this.lastValue) { return }
 
-  let el = this.target;
+  var el = this.target;
 
   // aria-*, data-*, and SVG element props need to be managed as attributes.
   if (ariaDataRegExp.test(this.key) || svgNsRegExp.test(el.namespaceURI)) {
@@ -100,7 +100,7 @@ Binding.prototype.update = function() {
 Binding.specialUpdateFnsByKey = {
   class: function classBindingUpdate() {
     // Supports (nested) array/non-array class value getters.
-    let i, x, el = this.target, newValue = Array.isArray(this.get)
+    var i, x, el = this.target, newValue = Array.isArray(this.get)
       ? flatMap(this.get, function(x) { return x() })
       : this.get();
 
@@ -125,7 +125,7 @@ Binding.specialUpdateFnsByKey = {
   },
 
   style: function styleBindingUpdate() {
-    let newValue = this.get();
+    var newValue = this.get();
 
     // If the value hasn't changed, do nothing.
     if (newValue === this.lastValue) { return }
@@ -139,18 +139,18 @@ Binding.specialUpdateFnsByKey = {
   },
 
   checked: function checkedBindingUpdate() {
-    let self = this, newValue;
+    var self = this, newValue;
 
     // On first update, lazily creates event handlers for tracking input value
     // changes.
     if (!self.setHandler) {
       self.target.addEventListener('change', self.setHandler = function(ev) {
-        let x = ev.target.checked;
+        var x = ev.target.checked;
         self.lastValue = self.set ? self.set(x) : x;
 
         // Calling self.set inherently changes application state, so we may
         // need to update other bindings elsewhere that depend on it.
-        self.set && update();
+        self.set && updateSync();
       });
     }
 
@@ -166,18 +166,18 @@ Binding.specialUpdateFnsByKey = {
   },
 
   value: function valueBindingUpdate() {
-    let self = this, newValue;
+    var self = this, newValue;
 
     // On first update, lazily creates event handlers for tracking input value
     // changes.
     if (!self.setHandler) {
       self.target.addEventListener('keyup', self.setHandler = function(ev) {
-        let x = ev.target.value;
+        var x = ev.target.value;
         self.lastValue = self.set ? self.set(x) : x;
 
         // Calling self.set inherently changes application state, so we may
         // need to update other bindings elsewhere that depend on it.
-        self.set && update();
+        self.set && updateSync();
       });
     }
 
@@ -203,7 +203,7 @@ function createBinding(x) { return new Binding(x) }
 // Initializes common binding props (target, key, subkey, update) and adds
 // bindings to DOM nodes.
 function bindToNode(n, key, subkey, binding) {
-  let bindingUpdateFn = Binding.specialUpdateFnsByKey[key];
+  var bindingUpdateFn = Binding.specialUpdateFnsByKey[key];
 
   objAssign(binding, { target: n, key: key, subkey: subkey });
   if (bindingUpdateFn) { binding.update = bindingUpdateFn }
@@ -215,10 +215,10 @@ function bindToNode(n, key, subkey, binding) {
 function JsxFragment(props) { return props.children || [] }
 
 function createElement(type) {
-  let el, evName, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
+  var el, evName, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
 
   // If second arg is nullish or a plain object, it's the props arg.
-  let props = nullish(rest[0]) ||
+  var props = nullish(rest[0]) ||
     (rest[0] && rest[0].constructor === Object) ? rest.shift() : null;
 
   // Create one if missing.
@@ -230,7 +230,7 @@ function createElement(type) {
   }
 
   // Flatten child arrays.
-  let children = flat(props.children ? arrayify(props.children) : rest, 10);
+  var children = flat(props.children ? arrayify(props.children) : rest, 10);
 
   // If the element type is a function, delegate everything to its implementation.
   if (typeof type === 'function') {
@@ -272,10 +272,10 @@ function createElement(type) {
 
       el.addEventListener(evName, (function(v, ev) {
         var ret = v(ev);
-        update();
+        updateSync();
 
         if (ret && typeof ret.then === 'function') {
-          ret.then(function() { update() });
+          ret.then(function() { updateSync() });
         }
       }).bind(null, v));
 
@@ -353,6 +353,15 @@ function createElement(type) {
       continue;
     }
 
+    // Special handling for aria/data-* and SVG attributes
+    if (ariaDataRegExp.test(k) || svgNsRegExp.test(el.namespaceURI)) {
+      if (!nullish(v)) {
+        el.setAttribute(k, v);
+      } else {
+        el.removeAttribute(k);
+      }
+    }
+
     // All else are (static) regular DOM element properties.
     el[k] = v;
   }
@@ -372,7 +381,7 @@ function createComment(text) {
 }
 
 function createBoundComment(text, bindingProps) {
-  let c = createComment(text);
+  var c = createComment(text);
   c.bindings = [new Binding(objAssign(bindingProps, { target: c }))];
   return c;
 }
@@ -387,13 +396,13 @@ function createIfAnchor(predFn, thenNodes, elseNodes) {
 }
 
 function ifAnchorBindingUpdate() {
-  let i, n;
-  let nAnchor = this.target, newValue = Boolean(this.get()), nNew, nCursor;
+  var i, n;
+  var nAnchor = this.target, newValue = Boolean(this.get()), nNew, nCursor;
 
   // If the value hasn't changed, do nothing.
   if (newValue === this.lastValue) { return }
 
-  let parentEl = nAnchor.parentNode;
+  var parentEl = nAnchor.parentNode;
 
   // Remove currently anchored nodes (if any).
   if (nAnchor.anchoredNodes && nAnchor.anchoredNodes.length) {
@@ -437,10 +446,10 @@ function createMapAnchor(getFn, mapFn) {
 }
 
 function mapAnchorBindingUpdate() {
-  let self = this, i, metaNew, metaLast, n, xNew, xLast;
-  let nAnchor = self.target, parentEl = nAnchor.parentNode;
+  var self = this, i, metaNew, metaLast, n, xNew, xLast;
+  var nAnchor = self.target, parentEl = nAnchor.parentNode;
   var tail, updatedNodes;
-  let newArray = [].slice.call(self.get() || []);
+  var newArray = [].slice.call(self.get() || []);
 
   // Initialize to empty arrays if this is the first execution.
   self.lastArray = self.lastArray || [];
@@ -451,7 +460,7 @@ function mapAnchorBindingUpdate() {
   // there. If the value is present in newArray, meta.iNew is its index there.
   // If the value isn't new, meta.n will be its associated DOM node from
   // lastNodes.
-  let valueMap = new Map();
+  var valueMap = new Map();
 
   // Iterate from 0 to lastArray.length or newArray.length, whichever is
   // greater.
@@ -500,7 +509,7 @@ function mapAnchorBindingUpdate() {
     // node associated with this value (x) just before whatever node is
     // currently on index meta.iNew. Otherwise, the new index overflows
     // updatedNodes and as such should be inserted at tail position.
-    let nextSibling = updatedNodes[meta.iNew] || tail;
+    var nextSibling = updatedNodes[meta.iNew] || tail;
 
     n = meta.n;
 
@@ -547,7 +556,7 @@ function mapAnchorBindingUpdate() {
 }
 
 function createTextNode(getFn) {
-  let n = document.createTextNode('');
+  var n = document.createTextNode('');
 
   n.bindings = [new Binding({
     get: getFn,
@@ -559,7 +568,7 @@ function createTextNode(getFn) {
 }
 
 function textNodeBindingUpdate() {
-  let newValue = this.get();
+  var newValue = this.get();
 
   // Convert nullish and boolean values to empty strings. Cast everything
   // else to string.
@@ -574,7 +583,7 @@ function textNodeBindingUpdate() {
 }
 
 function forEachNodeWithBindings(ns, cb) {
-  let queue = [].slice.call(ns), n;
+  var queue = [].slice.call(ns), n;
 
   while (queue.length) {
     n = queue.shift();
@@ -587,11 +596,11 @@ function forEachNodeWithBindings(ns, cb) {
 function processMutations(muts, observer, di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
-  di.update = di.update || update;
+  di.updateNode = di.updateNode || updateNode;
   di.console = di.console || console;
 
-  let i, j, mut, n, b;
-  let newNodes = [], orphanedNodes = [];
+  var i, j, mut, n, b;
+  var newNodes = [], orphanedNodes = [];
 
   // Collect newNodes.
   for (i = 0; i < muts.length; i++) {
@@ -647,12 +656,12 @@ function processMutations(muts, observer, di) {
         }
       }
 
-      di.update(n);
+      di.updateNode(n, di);
     }
   });
 }
 
-let observer = typeof MutationObserver !== 'undefined' &&
+var observer = typeof MutationObserver !== 'undefined' &&
   new MutationObserver(processMutations);
 
 observer && observer.observe(document, { childList: true, subtree: true });
@@ -660,12 +669,12 @@ observer && observer.observe(document, { childList: true, subtree: true });
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
 function update() {
-  let p = window.Promise && new Promise(function(cb) { update.promiseCallbacks.push(cb) });
+  var p = window.Promise && new Promise(function(cb) { update.promiseCallbacks.push(cb) });
 
   if (update.frame) { return p }
 
   update.frame = requestAnimationFrame(function() {
-    let i;
+    var i;
 
     updateSync();
     update.frame = null;
@@ -690,7 +699,7 @@ function updateSync(di) {
   di.evListeners = di.evListeners || evListeners;
   di.console = di.console || console;
 
-  let i;
+  var i;
 
   for (i = 0; i < di.evListeners.beforeUpdate.length; i++) {
     try { di.evListeners.beforeUpdate[i]() }
@@ -711,7 +720,7 @@ function updateNode(n, di) {
   di = di || {};
   di.console = di.console || console;
 
-  let i, b;
+  var i, b;
 
   // n.parentNode is a workaround for IE11's Node#contains not working on
   // non-Element nodes.
@@ -727,7 +736,7 @@ function updateNode(n, di) {
   }
 }
 
-let evListeners = { beforeUpdate: [], update: [] };
+var evListeners = { beforeUpdate: [], update: [] };
 
 function addEventListener(evName, fn) { evListeners[evName].push(fn) }
 
@@ -736,12 +745,12 @@ function removeEventListener(evName, fn) {
   if (i !== -1) { evListeners[evName].splice(i, 1) }
 }
 
-let effects = {};
+var effects = {};
 
 function setEffect(getFn, effectFn) {
-  let id = setEffect.nextId++;
-  let effect = effects[id] = { get: getFn, run: effectFn };
-  let firstValue = getFn();
+  var id = setEffect.nextId++;
+  var effect = effects[id] = { get: getFn, run: effectFn };
+  var firstValue = getFn();
 
   effect.run(firstValue);
   effect.lastValue = shallowClone(firstValue);
@@ -752,7 +761,7 @@ function setEffect(getFn, effectFn) {
 setEffect.nextId = 1;
 
 function updateEffect(id) {
-  let effect = effects[id], newValue = effect.get();
+  var effect = effects[id], newValue = effect.get();
 
   if (shallowEq(newValue, effect.lastValue)) { return }
 
@@ -764,8 +773,8 @@ function clearEffect(id) {
   delete effects[id];
 }
 
-addEventListener('beforeUpdate', () => {
-  for (let id in effects) { updateEffect(id) }
+addEventListener('beforeUpdate', function() {
+  for (var id in effects) { updateEffect(id) }
 });
 
 objAssign(exports, {
@@ -800,7 +809,7 @@ objAssign(exports, {
 function arrayify(x) { return Array.isArray(x) ? x : [x] }
 
 function shallowEq(a, b) {
-  let i, k;
+  var i, k;
 
   if (a === b) { return true }
 
@@ -837,7 +846,7 @@ function shallowClone(x) {
 
 // IE11 helpers:
 function objAssign(a, b) {
-  let k;
+  var k;
 
   for (k in b) {
     if (!b.hasOwnProperty(k)) { continue }
