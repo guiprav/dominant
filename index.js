@@ -32,7 +32,7 @@ function normalizeClasses(x) {
 // basically the same reason as described above in normalizeClasses).
 function appendableNode(x) {
   if (x instanceof Node) { return x }
-  if ((!x && typeof x !== 'number') || typeof x === 'boolean') { return null }
+  if (typeof x === 'boolean' || (!x && typeof x !== 'number')) { return null }
 
   return document.createTextNode(x);
 }
@@ -718,7 +718,6 @@ function updateSync(di) {
 
 function updateNode(n, di) {
   di = di || {};
-  di.console = di.console || console;
 
   var i, b;
 
@@ -728,12 +727,46 @@ function updateNode(n, di) {
 
   for (i = 0; i < n.bindings.length; i++) {
     b = n.bindings[i];
-    try { b.update && b.update() }
-    catch (e) {
-      di.console.error(e);
-      di.console.error('in', b);
+
+    try {
+      b.update && b.update();
+
+      if (b.error) {
+        if (--b.error.count <= 0) { clearError(b.error) }
+        b.error = null;
+      }
+    } catch (e) {
+      handleBindingError(e, b, di);
     }
   }
+}
+
+var errors = {};
+
+function handleBindingError(e, binding, di) {
+  di.console = di.console || console;
+
+  var eDesc = e.toString();
+
+  var eEntry = errors[eDesc] = errors[eDesc] || {
+    firstInstance: e,
+    count: 0,
+    bindings: [],
+  };
+
+  eEntry.count++;
+  if (eEntry.bindings.indexOf(binding) === -1) { eEntry.bindings.push(binding) }
+
+  binding.error = eEntry;
+
+  if (eEntry.count === 1) {
+    di.console.error(e);
+    di.console.error('in', binding);
+  }
+}
+
+function clearError(e) {
+  delete errors[e.toString()];
 }
 
 var evListeners = { beforeUpdate: [], update: [] };
@@ -768,6 +801,10 @@ objAssign(exports, {
   update: update,
   updateSync: updateSync,
   updateNode: updateNode,
+
+  errors: errors,
+  handleBindingError: handleBindingError,
+  clearError: clearError,
 });
 
 // General helpers:
