@@ -810,42 +810,6 @@ objAssign(exports, {
 // General helpers:
 function arrayify(x) { return Array.isArray(x) ? x : [x] }
 
-function shallowEq(a, b) {
-  var i, k;
-
-  if (a === b) { return true }
-
-  if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) { return false }
-
-    for (i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) { return false }
-    }
-
-    return true;
-  }
-
-  if (typeof a === 'object') {
-    if (typeof b !== 'object') { return false }
-    if (Object.keys(a).length !== Object.keys(b).length) { return false }
-
-    for (k in a) {
-      if (!a.hasOwnProperty(k)) { continue }
-      if (a[k] !== b[k]) { return false }
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
-function shallowClone(x) {
-  if (Array.isArray(x)) { return [].slice.call(x) }
-  else if (typeof x === 'object') { return objAssign({}, x) }
-  return x;
-}
-
 // IE11 helpers:
 function objAssign(a, b) {
   var k;
