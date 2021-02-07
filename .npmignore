@@ -1,3 +1,4 @@
+*.spec.js
 bundle.js
 demos
 node_modules
