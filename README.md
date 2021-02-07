@@ -1,4 +1,4 @@
-# <img src="logo.svg" alt="Dominant logo" height="40" align="top"> Dominant – Dysfunctional JavaScript UI library
+# <img src="logo.svg" alt="Dominant logo" height="40" align="top"> Dominant – Dysfunctional JavaScript UIs
 
 [React](http://reactjs.org) has been truly revolutionary back in the day, and it's taught us many important lessons, but I think it's about time we move on, and I'm not excited about any of the existing alternatives as they're all similarly complex.
 
@@ -18,11 +18,32 @@ It should let me leverage DOM APIs, not abstract them away.
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
   * Finally, the API is JSX-compatible.
 
-These are this library's design principles. I thought about them by applying first principles thinking to come up with a minimum set of features a JavaScript UI library needs to enable sane, comfortable development of modern web apps.
-
 Performance demo:
 
 [![1k Components demo screenshot](demos/1kComponents/screenshot.png)](https://dominant-demos.netlify.app/1kcomponents)
+
+## Setup
+
+The easiest way to bootstrap a Dominant project is to use [Create Dominant App](https://www.npmjs.com/package/create-dominant-app).
+If you have npm installed, the following command is all that's necessary:
+
+```sh
+# Replace your-app-name with the desired project name.
+$ npm init dominant-app your-app-name
+```
+
+npm will automatically install [create-dominant-app](https://www.npmjs.com/package/create-dominant-app) and run it for you.
+`create-dominant-app` will create your new app directory, initialize `package.json` in it, and install all the necessary dependencies.
+
+Once the script finishes, you'll be able to change into the newly created directory and start the development server:
+
+```sh
+$ cd your-app-name
+$ npm start
+```
+
+Then open http://localhost:5000/ to see your app.<br>
+When you're ready to deploy to production, create a minified bundle with `npm run build`.
 
 ## API
 
