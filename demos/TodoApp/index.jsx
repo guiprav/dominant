@@ -6,18 +6,20 @@ class App {
 
   onAttach = () => {
     this.todos = JSON.parse(localStorage.getItem('todos') || '[]');
-
-    this.storeEffectId = d.setEffect(
-      () => JSON.stringify(this.todos.map(x => ({
-        text: x.text,
-        completed: x.completed,
-      }))),
-
-      x => localStorage.setItem('todos', x),
-    );
+    d.on('update', this.onUpdate);
   };
 
-  onDetach = () => { d.clearEffect(this.storeEffectId) };
+  onDetach = () => { d.off('update', this.onUpdate) };
+
+  onUpdate = () => {
+    let jsonTodos = JSON.stringify(this.todos.map(x => ({
+      text: x.text,
+      completed: x.completed,
+    })));
+
+    if (jsonTodos === this.lastJsonTodos) { return }
+    localStorage.setItem('todos', this.lastJsonTodos = jsonTodos);
+  };
 
   onNewKeyUp = ev => {
     if (ev.key === 'Enter') {

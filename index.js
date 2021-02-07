@@ -588,8 +588,7 @@ function forEachNodeWithBindings(ns, cb) {
   while (queue.length) {
     n = queue.shift();
     n.bindings && cb(n);
-    if (!n.childNodes) { continue }
-    [].unshift.apply(queue, n.childNodes);
+    if (n.childNodes) { [].unshift.apply(queue, n.childNodes) }
   }
 }
 
