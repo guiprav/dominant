@@ -16,7 +16,6 @@ It should let me leverage DOM APIs, not abstract them away.
   * It also means there's no **mount** function; components are just functions or classes with render functions that return DOM nodes you can compose using a familiar [JSX](https://reactjs.org/docs/introducing-jsx.html) and/or [Hyperscript](https://github.com/hyperhype/hyperscript)-like API and append wherever.
   * A DOM [mutation observer](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver) keeps track of which DOM nodes with bindings are attached to the document and calls lifecycle listeners (**attach**/**detach**, if any).
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
-  * Finally, the API is JSX-compatible.
 
 Don't miss the [demos](#demos) and [API documentation](#api) sections.
 
