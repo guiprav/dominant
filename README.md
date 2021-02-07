@@ -18,6 +18,10 @@ It should let me leverage DOM APIs, not abstract them away.
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
   * Finally, the API is JSX-compatible.
 
+To-Do App demo:
+
+[![To-Do App demo screenshot](demos/TodoApp/screenshot.png)](https://dominant-demos.netlify.app/todoapp)
+
 Performance demo:
 
 [![1k Components demo screenshot](demos/1kComponents/screenshot.png)](https://dominant-demos.netlify.app/1kcomponents)
