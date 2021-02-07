@@ -18,13 +18,7 @@ It should let me leverage DOM APIs, not abstract them away.
   * This plays well with other DOM-based UI libraries, such as vanilla JS components and jQuery UI.
   * Finally, the API is JSX-compatible.
 
-To-Do App demo:
-
-[![To-Do App demo screenshot](demos/TodoApp/screenshot.png)](https://dominant-demos.netlify.app/todoapp)
-
-Performance demo:
-
-[![1k Components demo screenshot](demos/1kComponents/screenshot.png)](https://dominant-demos.netlify.app/1kcomponents)
+Don't miss the [demos](#demos) and [API documentation](#api) sections.
 
 ## Setup
 
@@ -48,6 +42,20 @@ $ npm start
 
 Then open http://localhost:5000/ to see your app.<br>
 When you're ready to deploy to production, create a minified bundle with `npm run build`.
+
+## Demos
+
+### To-Do App
+
+Based on [TodoMVC](https://todomvc.com/):
+
+[![To-Do App demo screenshot](demos/TodoApp/screenshot.png)](https://dominant-demos.netlify.app/todoapp)
+
+### 1k Components
+
+Heavy real-time animation performance demo:
+
+[![1k Components demo screenshot](demos/1kComponents/screenshot.png)](https://dominant-demos.netlify.app/1kcomponents)
 
 ## API
 
