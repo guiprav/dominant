@@ -6,7 +6,7 @@ class App {
 
   render = () => (
     <div model={this} class="app-wrapper">
-      <VizDemo count={() => this.numPoints} />
+      <VizDemo count={d.binding(() => this.numPoints)} />
 
       <div class="controls">
         # Points

@@ -238,6 +238,22 @@ function createElement(type) {
     props = objAssign({}, props);
     props.children = children;
 
+    for (k in props) {
+      v = props[k];
+      if (!(v instanceof Binding)) { continue }
+
+      (function(k, v) {
+        Object.defineProperty(props, k, {
+          enumerable: true,
+          get: v.get,
+
+          set: v.set || function() {
+            throw new TypeError('Missing setter for ' + k + ' binding');
+          },
+        });
+      })(k, v);
+    }
+
     // Instantiate and call render if type is a class and/or its prototype has
     // a render method.
     if (type.prototype && (

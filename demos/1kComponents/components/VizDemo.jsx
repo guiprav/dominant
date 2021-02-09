@@ -32,7 +32,7 @@ class VizDemo {
   }
 
   next() {
-    const newCount = d.resolve(this.props.count);
+    const newCount = this.props.count;
 
     if (newCount !== this.count) {
       this.count = newCount;
