@@ -598,6 +598,13 @@ function textNodeBindingUpdate() {
   this.lastValue = this.target.textContent = newValue;
 }
 
+function fromContext(n, k) {
+  while (n) {
+    if (n.context && n.context[k]) { return n.context[k] }
+    n = n.parentNode;
+  }
+}
+
 function forEachNodeWithBindings(ns, cb) {
   var queue = [].slice.call(ns), n;
 
@@ -804,6 +811,8 @@ objAssign(exports, {
   if: createIfAnchor,
   map: createMapAnchor,
   text: createTextNode,
+
+  fromContext: fromContext,
 
   processMutations: processMutations,
   boundNodes: boundNodes,
