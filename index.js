@@ -608,7 +608,7 @@ function mapAnchorBindingUpdate() {
         updatedNodes[meta.iLast] = null;
       }
 
-      updatedNodes.splice(meta.iNew, 1, n);
+      updatedNodes[meta.iNew] = n;
       return;
     }
 
@@ -627,7 +627,7 @@ function mapAnchorBindingUpdate() {
       updatedNodes[meta.iLast] = null;
     }
 
-    updatedNodes.splice(meta.iNew, 1, n);
+    updatedNodes[meta.iNew] = n;
   });
 
   nAnchor.anchoredNodes = flat(updatedNodes, 10);
