@@ -473,7 +473,7 @@ function createMapAnchor(getFn, mapFn) {
 }
 
 function mapAnchorBindingUpdate() {
-  var self = this, i, metaNew, metaLast, n, xNew, xLast;
+  var self = this, i, metaNew, metaLast, n, nFirst, xNew, xLast;
   var nAnchor = self.target, parentEl = nAnchor.parentNode;
   var nextSibling, tail, updatedNodes;
   var newArray = [].slice.call(self.get() || []);
@@ -570,12 +570,14 @@ function mapAnchorBindingUpdate() {
         : n.map(appendableNode).filter(Boolean);
     }
 
+    nFirst = Array.isArray(n) ? n[0] : n;
+
     // Find nextSibling for this node by scanning updatedNodes from meta.iNew
     // (updatedNodes can be null while items are moved around to match their new
-    // positions).
+    // positions; others can be empty arrays, so we skip those too).
     for (i = meta.iNew; i < updatedNodes.length; i++) {
       nextSibling = updatedNodes[i];
-      if (nextSibling) { break }
+      if (nextSibling && (!Array.isArray(nextSibling) || nextSibling.length)) { break }
     }
 
     if (nextSibling) {
@@ -591,8 +593,7 @@ function mapAnchorBindingUpdate() {
     // the DOM as a consequence of other node changes, so we only need to update
     // updatedNodes.
     if (meta.iLast !== undefined && (
-      nextSibling === (Array.isArray(n) ? n[0] : n) ||
-      nextSibling === (Array.isArray(n) ? n[0] : n).nextSibling
+      nextSibling === nFirst || nextSibling === nFirst.nextSibling
     )) {
       // Replace what's in meta.iLast with a null value in updatedNodes, unless
       // it's already been replaced by another node taking its position. Doing
