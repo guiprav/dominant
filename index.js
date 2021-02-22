@@ -504,16 +504,16 @@ function mapAnchorBindingUpdate() {
     // that was not reordered, so we skip them.
     if (xLast === xNew) { continue }
 
-    // If i is within newArray bounds, store meta.iNew for this value.
-    if (i < newArray.length) {
-      metaNew = objAssign({}, indexMap.get(xNew) || {});
-      indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
-    }
-
     // If i is within lastArray bounds, store meta.iLast for this value.
     if (i < self.lastArray.length) {
       metaLast = objAssign({}, indexMap.get(xLast) || {});
       indexMap.set(xLast, objAssign(metaLast, { iLast: i }));
+    }
+
+    // If i is within newArray bounds, store meta.iNew for this value.
+    if (i < newArray.length) {
+      metaNew = objAssign({}, indexMap.get(xNew) || {});
+      indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
     }
   }
 
