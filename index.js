@@ -478,7 +478,7 @@ function createMapAnchor(getFn) {
 }
 
 function mapAnchorBindingUpdate() {
-  var self = this, i, metaNew, metaLast, n, nFirst, nSep, xNew, xLast;
+  var self = this, i, j, metaNew, metaLast, n, nFirst, nSep, xNew, xLast;
   var nAnchor = self.target, parentEl = nAnchor.parentNode;
   var nextSibling, tail, updatedNodes;
   var newArray = [].slice.call(self.get() || []);
@@ -630,11 +630,17 @@ function mapAnchorBindingUpdate() {
     updatedNodes[meta.iNew] = n;
   });
 
-  nAnchor.anchoredNodes = flat(updatedNodes, 10);
+  // Remember updated array values and its associated nodes.
+  self.lastArray = newArray;
+  self.lastNodes = updatedNodes;
+
+  // Copy updatedNodes so we can add separators as well to anchoredNodes,
+  // without affecting updatedNodes/lastNodes.
+  nAnchor.anchoredNodes = [].slice.call(updatedNodes);
 
   // Create/move separators into place.
   if (self.nSep) {
-    for (i = 1; i < updatedNodes.length; i++) {
+    for (i = 1, j = 0; i < updatedNodes.length; i++) {
       nSep = self.nSepPool[i - 1];
       if (!nSep) { nSep = self.nSep.cloneNode(true); self.nSepPool.push(nSep) }
 
@@ -643,6 +649,10 @@ function mapAnchorBindingUpdate() {
 
       if (nFirst && nSep.nextSibling !== nFirst) {
         parentEl.insertBefore(nSep, nFirst);
+
+        // j keeps track of the index drift between updatedNodes and
+        // anchoredNodes caused by the insertion of previous separators.
+        nAnchor.anchoredNodes.splice(i + j++, 0, nSep);
       }
     }
 
@@ -656,9 +666,7 @@ function mapAnchorBindingUpdate() {
     self.nSepPool.length = Math.max(0, updatedNodes.length - 1);
   }
 
-  // Remember updated array values and its associated nodes.
-  self.lastArray = newArray;
-  self.lastNodes = updatedNodes;
+  nAnchor.anchoredNodes = flat(nAnchor.anchoredNodes, 10);
 }
 
 function createTextNode(getFn) {
