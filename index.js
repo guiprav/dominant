@@ -560,7 +560,7 @@ function mapAnchorBindingUpdate() {
       // instead of actually removing items preserves indices, which makes
       // everything much simpler.
       if (updatedNodes[meta.iLast] === n) {
-        updatedNodes[updatedNodes.indexOf(n)] = null;
+        updatedNodes[meta.iLast] = null;
       }
 
       return;
