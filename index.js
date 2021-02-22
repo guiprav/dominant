@@ -45,13 +45,24 @@ function removeWithAnchoredNodes(n) {
 
   if (n.anchoredNodes) {
     for (i = 0; i < n.anchoredNodes.length; i++) {
-      n.anchoredNodes[i].parentNode.removeChild(n.anchoredNodes[i]);
+      removeWithAnchoredNodes(n.anchoredNodes[i]);
     }
 
     delete n.anchoredNodes;
   }
 
   n.parentNode.removeChild(n);
+}
+
+// Some nodes have n.anchoredNodes. When moving n, it's important to also
+// move all anchored nodes. This function can be safely used to move any node,
+// even ones that don't have anchored nodes.
+function insertBeforeWithAnchoredNodes(parentEl, n, n2) {
+  parentEl.insertBefore(n, n2);
+
+  n.anchoredNodes && n.anchoredNodes.forEach(function(n) {
+    insertBeforeWithAnchoredNodes(parentEl, n, n2);
+  });
 }
 
 // All bindings are represented as instances of this class.
@@ -488,11 +499,13 @@ function mapAnchorBindingUpdate() {
     // that was not reordered, so we skip them.
     if (xLast === xNew) { continue }
 
+    // If i is within newArray bounds, store meta.iNew for this value.
     if (i < newArray.length) {
       metaNew = objAssign({}, indexMap.get(xNew) || {});
       indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
     }
 
+    // If i is within lastArray bounds, store meta.iLast for this value.
     if (i < self.lastArray.length) {
       metaLast = objAssign({}, indexMap.get(xLast) || {});
       indexMap.set(xLast, objAssign(metaLast, { iLast: i }));
@@ -505,38 +518,50 @@ function mapAnchorBindingUpdate() {
   // other nodes inside parentEl, so inserting before them has the effect of
   // inserting nodes after all mapped nodes, but before any next siblings.
   if (self.lastNodes.length) {
-    tail = self.lastNodes[self.lastNodes.length - 1];
+    // Find rightmost non-empty array lastNode index.
+    i = self.lastNodes.length - 1;
+    while (Array.isArray(self.lastNodes[i]) && !self.lastNodes[i].length) { i-- }
+    tail = self.lastNodes[i];
+
+    // If it's an array, get the last node inside of it.
     if (Array.isArray(tail)) { tail = tail[tail.length - 1] }
 
-    while (tail.anchoredNodes && tail.anchoredNodes.length) {
+    // If we arrived at a node with anchoredNodes, get the latest anchoredNode.
+    while (tail && tail.anchoredNodes && tail.anchoredNodes.length) {
       tail = tail.anchoredNodes[tail.anchoredNodes.length - 1];
     }
-  } else {
-    tail = nAnchor;
   }
 
-  tail = tail.nextSibling;
+  // If we couldn't find any actual DOM node in lastNodes, use the nAnchor
+  // instead. Also the tail position we're interested in is right after the node
+  // currently in tail position, so we take its nextSibling for tail.
+  tail = (tail || nAnchor).nextSibling;
 
   // We start by making a shallow copy of lastNodes so we can make changes to
   // the copy without touching lastNodes itself (in case of errors, checking
   // lastNodes could help debugging).
   updatedNodes = [].slice.call(self.lastNodes);
 
+  // For each value that changed position...
   indexMap.forEach(function(meta, x) {
     n = self.lastNodes[meta.iLast];
 
+    // Remove all nodes associated with removed values.
     if (meta.iNew === undefined) {
       arrayify(n).forEach(removeWithAnchoredNodes);
 
+      // Replace it with a null value in updatedNodes, unless it's been
+      // previously replaced by another node taking its position. Doing this
+      // instead of actually removing items preserves indices, which makes
+      // everything much simpler.
       if (updatedNodes[meta.iLast] === n) {
-        updatedNodes.splice(updatedNodes.indexOf(n), 1, null);
+        updatedNodes[updatedNodes.indexOf(n)] = null;
       }
 
       return;
     }
 
-    // If we haven't created a node for this value yet, we do so, insert it
-    // at the right spot, and update updatedNodes to reflect these changes.
+    // If we haven't created a node for this value yet, we do so here.
     if (!n) {
       n = self.map(x);
 
@@ -545,36 +570,55 @@ function mapAnchorBindingUpdate() {
         : n.map(appendableNode).filter(Boolean);
     }
 
+    // Find nextSibling for this node by scanning updatedNodes from meta.iNew
+    // (updatedNodes can be null while items are moved around to match their new
+    // positions).
     for (i = meta.iNew; i < updatedNodes.length; i++) {
       nextSibling = updatedNodes[i];
       if (nextSibling) { break }
     }
 
     if (nextSibling) {
+      // If nextSibling is an array, we pick the first node in it.
       if (Array.isArray(nextSibling)) { nextSibling = nextSibling[0] }
     } else {
+      // If no nextSibling could be found in updatedNodes, we use tail.
       nextSibling = tail;
     }
 
+    // If the value is not new (meta.iLast !== undefined), but nextSibling is n
+    // itself or its current nextSibling, it means n has fallen into place in
+    // the DOM as a consequence of other node changes, so we only need to update
+    // updatedNodes.
     if (meta.iLast !== undefined && (
       nextSibling === (Array.isArray(n) ? n[0] : n) ||
-      nextSibling === (Array.isArray(n) ? n[0].nextSibling : n.nextSibling)
+      nextSibling === (Array.isArray(n) ? n[0] : n).nextSibling
     )) {
-      if (updatedNodes[meta.iLast] === n) { updatedNodes.splice(meta.iLast, 1, null) }
+      // Replace what's in meta.iLast with a null value in updatedNodes, unless
+      // it's already been replaced by another node taking its position. Doing
+      // this instead of actually removing items preserves indices, which makes
+      // everything much simpler.
+      if (updatedNodes[meta.iLast] === n) {
+        updatedNodes[meta.iLast] = null;
+      }
+
       updatedNodes.splice(meta.iNew, 1, n);
       return;
     }
 
+    // Lastly, if we're still here, it means all that's left to do is to
+    // actually move nodes before their nextSibling...
     arrayify(n).forEach(function(n) {
-      parentEl.insertBefore(n, nextSibling);
-
-      n.anchoredNodes && n.anchoredNodes.forEach(function(n) {
-        parentEl.insertBefore(n, nextSibling);
-      });
+      insertBeforeWithAnchoredNodes(parentEl, n, nextSibling);
     });
 
-    if (meta.iLast !== undefined && updatedNodes[meta.iLast] === n) {
-      updatedNodes.splice(meta.iLast, 1, null);
+    // And update updatedNodes.
+    // Replace what's in meta.iLast with a null value in updatedNodes, unless
+    // it's already been replaced by another node taking its position. Doing
+    // this instead of actually removing items preserves indices, which makes
+    // everything much simpler.
+    if (updatedNodes[meta.iLast] === n) {
+      updatedNodes[meta.iLast] = null;
     }
 
     updatedNodes.splice(meta.iNew, 1, n);
@@ -645,8 +689,7 @@ function processMutations(muts, observer, di) {
     mut = muts[i];
 
     for (j = 0; j < mut.addedNodes.length; j++) {
-      n = mut.addedNodes[j];
-      if (di.boundNodes.indexOf(n) === -1) { newNodes.push(n) }
+      newNodes.push(mut.addedNodes[j]);
     }
   }
 
@@ -663,39 +706,38 @@ function processMutations(muts, observer, di) {
   // Recursively remove boundNodes collected in the orphanedNodes array.
   forEachNodeWithBindings(orphanedNodes, function(n) {
     i = di.boundNodes.indexOf(n);
+    if (i === -1) { return }
 
-    if (i !== -1) {
-      di.boundNodes.splice(i, 1);
+    di.boundNodes.splice(i, 1);
 
-      for (i = 0; i < n.bindings.length; i++) {
-        b = n.bindings[i];
+    for (i = 0; i < n.bindings.length; i++) {
+      b = n.bindings[i];
 
-        if (onDetachRegExp.test(b.key)) {
-          try { b.handler(n) }
-          catch (e) { di.console.error(e) }
-          break;
-        }
+      if (onDetachRegExp.test(b.key)) {
+        try { b.handler(n) }
+        catch (e) { di.console.error(e) }
+        break;
       }
     }
   });
 
   // Recursively add boundNodes collected in the newNodes array.
   forEachNodeWithBindings(newNodes, function(n) {
-    if (di.boundNodes.indexOf(n) === -1) {
-      di.boundNodes.push(n);
+    if (di.boundNodes.indexOf(n) !== -1) { return }
 
-      for (i = 0; i < n.bindings.length; i++) {
-        b = n.bindings[i];
+    di.boundNodes.push(n);
 
-        if (onAttachRegExp.test(b.key)) {
-          try { b.handler(n) }
-          catch (e) { di.console.error(e) }
-          break;
-        }
+    for (i = 0; i < n.bindings.length; i++) {
+      b = n.bindings[i];
+
+      if (onAttachRegExp.test(b.key)) {
+        try { b.handler(n) }
+        catch (e) { di.console.error(e) }
+        break;
       }
-
-      di.updateNode(n, di);
     }
+
+    di.updateNode(n, di);
   });
 }
 
