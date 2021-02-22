@@ -464,16 +464,21 @@ function ifAnchorBindingUpdate() {
   this.lastValue = newValue;
 }
 
-function createMapAnchor(getFn, mapFn) {
+function createMapAnchor(getFn) {
+  var sep = arguments.length === 3 && arguments[1];
+  var mapFn = arguments.length === 2 ? arguments[1] : arguments[2];
+
   return createBoundComment('map anchor', {
     get: getFn,
     map: mapFn,
+    nSep: sep && appendableNode(sep),
+    nSepPool: [],
     update: mapAnchorBindingUpdate,
   });
 }
 
 function mapAnchorBindingUpdate() {
-  var self = this, i, metaNew, metaLast, n, nFirst, xNew, xLast;
+  var self = this, i, metaNew, metaLast, n, nFirst, nSep, xNew, xLast;
   var nAnchor = self.target, parentEl = nAnchor.parentNode;
   var nextSibling, tail, updatedNodes;
   var newArray = [].slice.call(self.get() || []);
@@ -626,6 +631,24 @@ function mapAnchorBindingUpdate() {
   });
 
   nAnchor.anchoredNodes = flat(updatedNodes, 10);
+
+  // Create/move separators into place.
+  if (self.nSep) {
+    for (i = 1; i < updatedNodes.length; i++) {
+      nSep = self.nSepPool[i - 1];
+      if (!nSep) { nSep = self.nSep.cloneNode(true); self.nSepPool.push(nSep) }
+
+      n = updatedNodes[i];
+      nFirst = Array.isArray(n) ? n[0] : n;
+
+      if (nFirst && nSep.nextSibling !== nFirst) {
+        parentEl.insertBefore(nSep, nFirst);
+      }
+    }
+
+    // Truncate nSepPool (lets unused separators be garbage collected).
+    self.nSepPool.length = updatedNodes.length - 1;
+  }
 
   // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
