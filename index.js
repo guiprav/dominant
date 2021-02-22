@@ -646,8 +646,14 @@ function mapAnchorBindingUpdate() {
       }
     }
 
+    // Remove unused separators from the document.
+    for (; i < self.nSepPool.length; i++) {
+      nSep = self.nSepPool[i];
+      parentEl.removeChild(nSep);
+    }
+
     // Truncate nSepPool (lets unused separators be garbage collected).
-    self.nSepPool.length = updatedNodes.length - 1;
+    self.nSepPool.length = Math.max(0, updatedNodes.length - 1);
   }
 
   // Remember updated array values and its associated nodes.
