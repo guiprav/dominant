@@ -642,6 +642,9 @@ function mapAnchorBindingUpdate() {
     updatedNodes[meta.iNew] = n;
   });
 
+  // Truncate updatedNodes to new length.
+  updatedNodes.length = newArray.length;
+
   // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
   self.lastNodes = updatedNodes;
