@@ -15,7 +15,7 @@ class App {
           type="range"
           min={10}
           max={10000}
-          value={d.ref(this.numPoiunts)}
+          value={d.ref(this.numPoints)}
           onInput={ev => this.numPoints = Number(ev.target.value)}
         />
 
