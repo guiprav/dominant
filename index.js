@@ -477,6 +477,11 @@ function createMapAnchor(getFn) {
   });
 }
 
+function Cursor() {}
+
+Cursor.prototype.toString = function() { return String(this.index) };
+Cursor.prototype.valueOf = function() { return this.index };
+
 function mapAnchorBindingUpdate() {
   var self = this, i, j, metaNew, metaLast, n, nFirst, nSep, xNew, xLast;
   var nAnchor = self.target, parentEl = nAnchor.parentNode;
@@ -518,7 +523,7 @@ function mapAnchorBindingUpdate() {
 
       // Update cursor index.
       self.cursorMap.set(xNew, objAssign(
-        self.cursorMap.get(xNew) || {}, { value: xNew, index: i },
+        self.cursorMap.get(xNew) || new Cursor(), { index: i },
       ));
     }
   }
@@ -575,7 +580,7 @@ function mapAnchorBindingUpdate() {
 
     // If we haven't created a node for this value yet, we do so here.
     if (!n) {
-      n = self.map(self.cursorMap.get(x));
+      n = self.map(x, self.cursorMap.get(x));
 
       n = !Array.isArray(n)
         ? appendableNode(n)
