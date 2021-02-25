@@ -115,39 +115,39 @@ class App {
             <ul class="todo-list">
               {d.map(() => this.filteredTodos(this.filter), x => (
                 <li class={() => [
-                  x.value.completed && 'completed',
-                  x.value.editing && 'editing'
+                  x.completed && 'completed',
+                  x.editing && 'editing'
                 ]}>
                   <div class="view">
                     <input
                       type="checkbox"
                       class="toggle"
                       checked={d.binding({
-                        get: () => x.value.completed,
-                        set: y => x.value.completed = y,
+                        get: () => x.completed,
+                        set: y => x.completed = y,
                       })}
                     />
 
                     <label
-                      onDblClick={() => this.editTodo(x.value)}
-                      children={d.text(() => x.value.text)}
+                      onDblClick={() => this.editTodo(x)}
+                      children={d.text(() => x.text)}
                     />
 
                     <button
                       class="destroy"
-                      onClick={() => this.removeTodo(x.value)}
+                      onClick={() => this.removeTodo(x)}
                     />
                   </div>
 
-                  {x.value.editInputEl = (
+                  {x.editInputEl = (
                     <input
                       class="edit"
                       value={d.binding({
-                        get: () => x.value.text,
-                        set: y => x.value.text = y,
+                        get: () => x.text,
+                        set: y => x.text = y,
                       })}
-                      onKeyUp={ev => this.onEditKeyUp(ev, x.value)}
-                      onBlur={() => x.value.editing = false}
+                      onKeyUp={ev => this.onEditKeyUp(ev, x)}
+                      onBlur={() => x.editing = false}
                     />
                   )}
                 </li>
