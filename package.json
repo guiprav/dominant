@@ -27,7 +27,8 @@
           "pragmaFrag": "d.JsxFragment",
           "throwIfNamespace": false
         }
-      ]
+      ],
+      "./babel-plugin-dref-macro"
     ]
   },
   "devDependencies": {
@@ -35,6 +36,7 @@
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/plugin-transform-modules-commonjs": "^7.12.1",
     "@babel/plugin-transform-react-jsx": "^7.12.12",
+    "@babel/types": "^7.12.12",
     "@types/chai": "^4.2.11",
     "@types/jsdom": "^16.2.3",
     "@types/mocha": "^8.0.0",
