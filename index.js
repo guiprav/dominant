@@ -959,10 +959,11 @@ function objAssign(a, b) {
 
 function flat(xs, d) {
   if (d === undefined) { d = 1 }
+  if (xs.flat) { return xs.flat(d) }
 
   return xs.reduce(function(acc, x) {
     return acc.concat(Array.isArray(x) ? (d > 0 ? flat(x, d - 1) : x) : x);
   }, []);
 }
 
-function flatMap(xs, fn) { return flat(xs.map(fn)) }
+function flatMap(xs, fn) { return xs.flatMap ? xs.flatMap(fn) : flat(xs.map(fn)) }
