@@ -116,7 +116,7 @@ class VizDemo {
 
   render = () => (
     <svg:svg onAttach={el => { el.model = this; this.next() }} class="demo">
-      <svg:g>{d.map(() => this.points, x => <Point data={x} />)}</svg:g>
+      <svg:g>{d.map(() => this.points, x => <Point data={x.value} />)}</svg:g>
     </svg:svg>
   );
 }

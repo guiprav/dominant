@@ -483,9 +483,10 @@ function mapAnchorBindingUpdate() {
   var nextSibling, tail, updatedNodes;
   var newArray = [].slice.call(self.get() || []);
 
-  // Initialize to empty arrays if this is the first execution.
+  // Initialize to empty arrays/maps if this is the first execution.
   self.lastArray = self.lastArray || [];
   self.lastNodes = self.lastNodes || [];
+  self.cursorMap = self.cursorMap || new Map();
 
   // indexMap maps array values (both from newArray and lastArray) to index
   // metadata objects: if the value is present in lastArray, meta.iLast is its
@@ -514,6 +515,7 @@ function mapAnchorBindingUpdate() {
     if (i < newArray.length) {
       metaNew = objAssign({}, indexMap.get(xNew) || {});
       indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
+      self.cursorMap.set(xNew, { value: xNew, index: i });
     }
   }
 
@@ -553,6 +555,7 @@ function mapAnchorBindingUpdate() {
 
     // Remove all nodes associated with removed values.
     if (meta.iNew === undefined) {
+      self.cursorMap.delete(x);
       arrayify(n).forEach(removeWithAnchoredNodes);
 
       // Replace it with a null value in updatedNodes, unless it's been
@@ -568,7 +571,7 @@ function mapAnchorBindingUpdate() {
 
     // If we haven't created a node for this value yet, we do so here.
     if (!n) {
-      n = self.map(x);
+      n = self.map(self.cursorMap.get(x));
 
       n = !Array.isArray(n)
         ? appendableNode(n)
