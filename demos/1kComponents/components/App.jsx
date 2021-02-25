@@ -15,8 +15,11 @@ class App {
           type="range"
           min={10}
           max={10000}
-          value={this.numPoints}
-          onInput={ev => this.numPoints = Number(ev.target.value)}
+
+          value={d.binding({
+            get: () => this.numPoints,
+            set: x => this.numPoints = Number(x),
+          })}
         />
 
         {this.numPoints}

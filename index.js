@@ -182,7 +182,7 @@ Binding.specialUpdateFnsByKey = {
     // On first update, lazily creates event handlers for tracking input value
     // changes.
     if (!self.setHandler) {
-      self.target.addEventListener('keyup', self.setHandler = function(ev) {
+      self.target.addEventListener('input', self.setHandler = function(ev) {
         var x = ev.target.value;
         self.lastValue = self.set ? self.set(x) : x;
 
@@ -291,6 +291,8 @@ function createElement(type) {
     // Add on* props as event listeners.
     if (k.indexOf('on') === 0 && v) {
       evName = k.replace(/^on:?/, '').toLowerCase();
+
+      if (v instanceof Binding) { v = v.get() }
 
       if (evName === 'attach' || evName === 'detach') {
         bindToNode(el, k, null, createBinding({ update: null, handler: v }));
@@ -799,8 +801,6 @@ var observer = typeof MutationObserver !== 'undefined' &&
 
 observer && observer.observe(document, { childList: true, subtree: true });
 
-function fnAttrGuardMacro(x) { return typeof x === 'function' ? x : null }
-
 function childMacro(fn) {
   try {
     let ret = fn();
@@ -934,7 +934,6 @@ objAssign(exports, {
   JsxFragment: JsxFragment,
   el: createElement,
   comment: createComment,
-  fnAttr: fnAttrGuardMacro,
   child: childMacro,
 
   if: createIfAnchor,

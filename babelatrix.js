@@ -5,10 +5,6 @@ let dCall = (k, ...args) => t.callExpression(
   t.memberExpression(t.identifier('d'), t.identifier(k)), args,
 );
 
-let fnAttrGuard = (originalExpr, bindingExpr) => t.logicalExpression(
-  '||', dCall('fnAttr', originalExpr), bindingExpr,
-);
-
 module.exports = declare((api, options) => {
   api.assertVersion(7);
 
@@ -29,27 +25,31 @@ module.exports = declare((api, options) => {
           );
 
           if (t.isIdentifier(expr) || t.isMemberExpression(expr)) {
-            node.expression = fnAttrGuard(expr, dCall(
-              'binding', t.objectExpression([
-                getProp, t.objectProperty(
-                  t.identifier('set'), t.arrowFunctionExpression(
-                    [t.identifier('dref$x')], t.assignmentExpression(
-                      '=', t.cloneNode(expr), t.identifier('dref$x'),
-                    ),
+            node.expression = dCall('binding', t.objectExpression([
+              getProp, t.objectProperty(
+                t.identifier('set'), t.arrowFunctionExpression(
+                  [t.identifier('dref$x')], t.assignmentExpression(
+                    '=', t.cloneNode(expr), t.identifier('dref$x'),
                   ),
                 ),
-              ]),
-            ));
-          } else if (
-            t.isArrayExpression(expr) ||
-            t.isBinaryExpression(expr) ||
-
-            (t.isCallExpression(expr) &&
-              !t.isIdentifier(expr.callee, { name: 'd' }))
-          ) {
-            node.expression = fnAttrGuard(
-              expr, dCall('binding', t.objectExpression([getProp])),
+              )
+            ]),
             );
+          } else if (
+            !t.isBigIntLiteral(expr) &&
+            !t.isBooleanLiteral(expr) &&
+            !t.isNullLiteral(expr) &&
+            !t.isNumericLiteral(expr) &&
+            !t.isRegExpLiteral(expr) &&
+            !t.isStringLiteral(expr) &&
+
+            !t.isArrowFunctionExpression(expr) &&
+            !t.isFunctionExpression(expr) &&
+
+            (!t.isCallExpression(expr) ||
+              !t.isIdentifier(expr.callee.object, { name: 'd' }))
+          ) {
+            node.expression = dCall('binding', t.objectExpression([getProp]));
           }
         }
       },
