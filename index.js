@@ -799,10 +799,26 @@ var observer = typeof MutationObserver !== 'undefined' &&
 
 observer && observer.observe(document, { childList: true, subtree: true });
 
+function fnAttrGuardMacro(x) { return typeof x === 'function' ? x : null }
+
+function childMacro(fn) {
+  try {
+    let ret = fn();
+
+    if (nullish(ret) || ret instanceof Node || Array.isArray(ret)) {
+      return ret;
+    }
+  } catch(err) {}
+
+  return createTextNode(fn);
+}
+
 function resolve(x) { return typeof x === 'function' ? x() : x }
 
 function update() {
-  var p = window.Promise && new Promise(function(cb) { update.promiseCallbacks.push(cb) });
+  var p = window.Promise && new Promise(function(cb) {
+    update.promiseCallbacks.push(cb);
+  });
 
   if (update.frame) { return p }
 
@@ -918,6 +934,8 @@ objAssign(exports, {
   JsxFragment: JsxFragment,
   el: createElement,
   comment: createComment,
+  fnAttr: fnAttrGuardMacro,
+  child: childMacro,
 
   if: createIfAnchor,
   map: createMapAnchor,

@@ -122,10 +122,7 @@ class App {
                     <input
                       type="checkbox"
                       class="toggle"
-                      checked={d.binding({
-                        get: () => x.completed,
-                        set: y => x.completed = y,
-                      })}
+                      checked={x.completed}
                     />
 
                     <label
@@ -142,10 +139,7 @@ class App {
                   {x.editInputEl = (
                     <input
                       class="edit"
-                      value={d.binding({
-                        get: () => x.text,
-                        set: y => x.text = y,
-                      })}
+                      value={x.text}
                       onKeyUp={ev => this.onEditKeyUp(ev, x)}
                       onBlur={() => x.editing = false}
                     />
@@ -157,7 +151,7 @@ class App {
 
           <footer class="footer">
             <span class="todo-count">
-              {d.text(() => `${this.activeTodos.length} items left`)}
+              {this.activeTodos.length} items left
             </span>
 
             {d.if(this.showFilters, (

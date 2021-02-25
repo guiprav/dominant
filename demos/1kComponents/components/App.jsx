@@ -6,7 +6,7 @@ class App {
 
   render = () => (
     <div model={this} class="app-wrapper">
-      <VizDemo count={d.ref(this.numPoints)} />
+      <VizDemo count={this.numPoints} />
 
       <div class="controls">
         # Points
@@ -15,11 +15,11 @@ class App {
           type="range"
           min={10}
           max={10000}
-          value={d.ref(this.numPoints)}
+          value={this.numPoints}
           onInput={ev => this.numPoints = Number(ev.target.value)}
         />
 
-        {d.text(() => this.numPoints)}
+        {this.numPoints}
       </div>
 
       <div class="about">

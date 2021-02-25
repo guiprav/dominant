@@ -20,6 +20,7 @@
     "plugins": [
       "@babel/plugin-transform-modules-commonjs",
       "@babel/plugin-proposal-class-properties",
+      "./babelatrix",
       [
         "@babel/plugin-transform-react-jsx",
         {
@@ -27,8 +28,7 @@
           "pragmaFrag": "d.JsxFragment",
           "throwIfNamespace": false
         }
-      ],
-      "./babel-plugin-dref-macro"
+      ]
     ]
   },
   "devDependencies": {
