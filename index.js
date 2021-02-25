@@ -515,7 +515,11 @@ function mapAnchorBindingUpdate() {
     if (i < newArray.length) {
       metaNew = objAssign({}, indexMap.get(xNew) || {});
       indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
-      self.cursorMap.set(xNew, { value: xNew, index: i });
+
+      // Update cursor index.
+      self.cursorMap.set(xNew, objAssign(
+        self.cursorMap.get(xNew) || {}, { value: xNew, index: i },
+      ));
     }
   }
 
