@@ -69,7 +69,7 @@ class VizDemo {
       point.y = lerp(oldPoint, pct, pyProp, nyProp);
     }
 
-    d.update();
+    d.updateSync();
     requestAnimationFrame(() => { this.next() });
   }
 
@@ -124,11 +124,8 @@ class VizDemo {
 const Point = ({ data }) => (
   <svg:rect
     class="point"
-    transform={() => `translate(
-      ${Math.floor(d.resolve(data.x))},
-      ${Math.floor(d.resolve(data.y))}
-    )`}
-    fill={() => d.resolve(data.color)}
+    transform={`translate(${data.x}, ${data.y})`}
+    fill={data.color}
   />
 );
 
