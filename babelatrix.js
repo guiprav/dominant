@@ -5,6 +5,21 @@ let dCall = (k, ...args) => t.callExpression(
   t.memberExpression(t.identifier('d'), t.identifier(k)), args,
 );
 
+let bindingProps = {
+  get: expr => t.objectProperty(
+    t.identifier('get'),
+    t.arrowFunctionExpression([], expr),
+  ),
+
+  set: expr => t.objectProperty(
+    t.identifier('set'), t.arrowFunctionExpression(
+      [t.identifier('dref$x')], t.assignmentExpression(
+        '=', t.cloneNode(expr), t.identifier('dref$x'),
+      ),
+    ),
+  ),
+};
+
 module.exports = declare((api, options) => {
   api.assertVersion(7);
 
@@ -12,6 +27,39 @@ module.exports = declare((api, options) => {
     name: "plugin-babelatrix",
 
     visitor: {
+      CallExpression(path) {
+        let { node } = path;
+
+        if (
+          !t.isMemberExpression(node.callee) ||
+          !t.isIdentifier(node.callee.object, { name: 'd' })
+        ) {
+          return;
+        }
+
+        switch (node.callee.property.name) {
+          case 'if':
+          case 'map':
+            if (
+              !t.isArrowFunctionExpression(node.arguments[0]) &&
+              !t.isFunctionExpression(node.arguments[0])
+            ) {
+              node.arguments[0] =
+                t.arrowFunctionExpression([], node.arguments[0]);
+            }
+
+            break;
+
+          case 'ref':
+            path.replaceWith(dCall('binding', t.objectExpression([
+              bindingProps.get(node),
+              bindingProps.set(t.cloneNode(node)),
+            ])));
+
+            break;
+        }
+      },
+
       JSXExpressionContainer(path) {
         let { node, parent } = path;
         let expr = node.expression;
@@ -19,22 +67,11 @@ module.exports = declare((api, options) => {
         if (t.isJSXElement(parent)) {
           node.expression = dCall('child', t.arrowFunctionExpression([], expr));
         } else if (t.isJSXAttribute(parent) && parent.name.name !== 'children') {
-          let getProp = t.objectProperty(
-            t.identifier('get'),
-            t.arrowFunctionExpression([], t.cloneNode(expr)),
-          );
-
           if (t.isIdentifier(expr) || t.isMemberExpression(expr)) {
             node.expression = dCall('binding', t.objectExpression([
-              getProp, t.objectProperty(
-                t.identifier('set'), t.arrowFunctionExpression(
-                  [t.identifier('dref$x')], t.assignmentExpression(
-                    '=', t.cloneNode(expr), t.identifier('dref$x'),
-                  ),
-                ),
-              )
-            ]),
-            );
+              bindingProps.get(expr),
+              bindingProps.set(t.cloneNode(expr))
+            ]));
           } else if (
             !t.isBigIntLiteral(expr) &&
             !t.isBooleanLiteral(expr) &&
@@ -49,7 +86,9 @@ module.exports = declare((api, options) => {
             (!t.isCallExpression(expr) ||
               !t.isIdentifier(expr.callee.object, { name: 'd' }))
           ) {
-            node.expression = dCall('binding', t.objectExpression([getProp]));
+            node.expression = dCall('binding', t.objectExpression([
+              bindingProps.get(expr),
+            ]));
           }
         }
       },

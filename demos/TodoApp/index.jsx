@@ -99,7 +99,7 @@ class App {
         />
       </header>
 
-      {d.if(() => this.todos.length, (
+      {d.if(this.todos.length, (
         <>
           <main class="main">
             <input
@@ -113,8 +113,8 @@ class App {
             <label htmlFor="toggle-all" />
 
             <ul class="todo-list">
-              {d.map(() => this.filteredTodos(this.filter), x => (
-                <li class={() => [
+              {d.map(this.filteredTodos(this.filter), x => (
+                <li class={[
                   x.completed && 'completed',
                   x.editing && 'editing'
                 ]}>
@@ -154,28 +154,26 @@ class App {
               {this.activeTodos.length} items left
             </span>
 
-            {d.if(this.showFilters, (
+            {d.if(this.showFilters(), (
               <ul class="filters">
                 {[...Object.entries({
                   all: 'All',
                   active: 'Active',
                   completed: 'Completed',
                 })].map(([k, label]) => (
-                  d.if(() => this.filteredTodos(k).length, (
-                    <li>
-                      <a
-                        href="#"
-                        class={() => this.filter === k && 'selected'}
-                        onClick={() => this.filter = k}
-                        textContent={label}
-                      />
-                    </li>
-                  ))
+                  <li>
+                    <a
+                      href="#"
+                      class={this.filter === k && 'selected'}
+                      onClick={() => this.filter = k}
+                      textContent={label}
+                    />
+                  </li>
                 ))}
               </ul>
             ))}
 
-            {d.if(() => this.completedTodos.length, (
+            {d.if(this.completedTodos.length, (
               <button class="clear-completed" onClick={this.clearCompleted}>
                 Clear completed
               </button>
