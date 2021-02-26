@@ -77,6 +77,7 @@ module.exports = declare((api, options) => {
             !t.isBooleanLiteral(expr) &&
             !t.isNullLiteral(expr) &&
             !t.isNumericLiteral(expr) &&
+            !t.isObjectExpression(expr) &&
             !t.isRegExpLiteral(expr) &&
             !t.isStringLiteral(expr) &&
 
