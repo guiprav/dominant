@@ -40,6 +40,7 @@ module.exports = declare((api, options) => {
         switch (node.callee.property.name) {
           case 'if':
           case 'map':
+          case 'text':
             if (
               !t.isArrowFunctionExpression(node.arguments[0]) &&
               !t.isFunctionExpression(node.arguments[0])
