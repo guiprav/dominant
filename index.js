@@ -3,7 +3,6 @@
 var boundNodes = [];
 
 var classTypeRegExp = /^class\s/;
-var ariaDataRegExp = /^(aria|data)-/;
 var svgNsRegExp = /\/svg$/;
 var wsRegExp = / |\r|\n/;
 var onAttachRegExp = /^on:?attach$/i
@@ -47,22 +46,25 @@ function removeWithAnchoredNodes(n) {
     for (i = 0; i < n.anchoredNodes.length; i++) {
       removeWithAnchoredNodes(n.anchoredNodes[i]);
     }
-
-    delete n.anchoredNodes;
   }
 
   n.parentNode.removeChild(n);
 }
 
 // Some nodes have n.anchoredNodes. When moving n, it's important to also
-// move all anchored nodes. This function can be safely used to move any node,
-// even ones that don't have anchored nodes.
+// move all anchored nodes. This function can be safely used to move any
+// node(s), even ones that don't have anchored nodes.
 function insertBeforeWithAnchoredNodes(parentEl, n, n2) {
+  if (Array.isArray(n)) {
+    n.forEach(function(n) { insertBeforeWithAnchoredNodes(parentEl, n, n2) });
+    return;
+  }
+
   parentEl.insertBefore(n, n2);
 
-  n.anchoredNodes && n.anchoredNodes.forEach(function(n) {
-    insertBeforeWithAnchoredNodes(parentEl, n, n2);
-  });
+  if (n.anchoredNodes) {
+    insertBeforeWithAnchoredNodes(parentEl, n.anchoredNodes, n2);
+  }
 }
 
 // All bindings are represented as instances of this class.
@@ -71,11 +73,8 @@ function Binding(x) {
   // typeof array === 'object', but arrays are to be stored as this.get
   // (e.g. class: new Binding([fn1, fn2...])), that's why we need the extra
   // check.
-  if (typeof x === 'object' && !Array.isArray(x)) {
-    objAssign(this, x);
-  } else {
-    this.get = x;
-  }
+  if (typeof x === 'object' && !Array.isArray(x)) { objAssign(this, x) }
+  else { this.get = x }
 }
 
 // Most prop bindings can be updated in a unified fashion:
@@ -87,13 +86,10 @@ Binding.prototype.update = function() {
 
   var el = this.target;
 
-  // aria-*, data-*, and SVG element props need to be managed as attributes.
-  if (ariaDataRegExp.test(this.key) || svgNsRegExp.test(el.namespaceURI)) {
-    if (!nullish(newValue)) {
-      el.setAttribute(this.key, newValue);
-    } else {
-      el.removeAttribute(this.key);
-    }
+  // SVG element props need to be managed as attributes.
+  if (svgNsRegExp.test(el.namespaceURI)) {
+    if (!nullish(newValue)) { el.setAttribute(this.key, newValue) }
+    else { el.removeAttribute(this.key) }
   } else {
     // All else are regular DOM element properties.
     el[this.key] = newValue;
@@ -226,7 +222,7 @@ function bindToNode(n, key, subkey, binding) {
 function JsxFragment(props) { return props.children || [] }
 
 function createElement(type) {
-  var el, evName, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
+  var el, evName, getters, i, k, k2, v, v2, rest = [].slice.call(arguments, 1);
 
   // If second arg is nullish or a plain object, it's the props arg.
   var props = nullish(rest[0]) ||
@@ -382,13 +378,10 @@ function createElement(type) {
       continue;
     }
 
-    // Special handling for aria/data-* and SVG attributes
-    if (ariaDataRegExp.test(k) || svgNsRegExp.test(el.namespaceURI)) {
-      if (!nullish(v)) {
-        el.setAttribute(k, v);
-      } else {
-        el.removeAttribute(k);
-      }
+    // SVG element props need to be managed as attributes.
+    if (svgNsRegExp.test(el.namespaceURI)) {
+      if (!nullish(v)) { el.setAttribute(k, v) }
+      else { el.removeAttribute(k) }
     }
 
     // All else are (static) regular DOM element properties.
@@ -426,14 +419,26 @@ function createIfAnchor(predFn, thenNodes, elseNodes) {
 
 function ifAnchorBindingUpdate() {
   var i, n;
-  var nAnchor = this.target, newValue = Boolean(this.get()), nNew, nCursor;
+  var nAnchor = this.target, parentEl = nAnchor.parentNode;
+  var newValue = Boolean(this.get()), nNew, nCursor;
 
-  // If the value hasn't changed, do nothing.
-  if (newValue === this.lastValue) { return }
+  if (newValue === this.lastValue) {
+    // Ensure anchoredNodes (if any) are really anchored to parentEl.
+    // Other binding updates may have ejected them.
+    if (
+      nAnchor.anchoredNodes &&
+      nAnchor.anchoredNodes.length &&
+      nAnchor.anchoredNodes[0].parentNode !== parentEl
+    ) {
+      insertBeforeWithAnchoredNodes(
+        parentEl, nAnchor.anchoredNodes, nAnchor.nextSibling);
+    }
 
-  var parentEl = nAnchor.parentNode;
+    // If the value hasn't changed, do nothing else.
+    return;
+  }
 
-  // Remove currently anchored nodes (if any).
+  // Since the value has changed, remove currently anchored nodes (if any).
   if (nAnchor.anchoredNodes && nAnchor.anchoredNodes.length) {
     for (i = 0; i < nAnchor.anchoredNodes.length; i++) {
       removeWithAnchoredNodes(nAnchor.anchoredNodes[i]);
@@ -455,7 +460,7 @@ function ifAnchorBindingUpdate() {
       n = appendableNode(nNew[i]);
       if (!n) { continue }
 
-      parentEl.insertBefore(n, nCursor.nextSibling);
+      insertBeforeWithAnchoredNodes(parentEl, n, nCursor.nextSibling);
       nAnchor.anchoredNodes.push(n);
 
       nCursor = n;
@@ -494,6 +499,17 @@ function mapAnchorBindingUpdate() {
   self.lastArray = self.lastArray || [];
   self.lastNodes = self.lastNodes || [];
   self.cursorMap = self.cursorMap || new Map();
+
+  // Ensure anchoredNodes (if any) are really anchored to parentEl.
+  // Other binding updates may have ejected them.
+  if (
+    nAnchor.anchoredNodes &&
+    nAnchor.anchoredNodes.length &&
+    nAnchor.anchoredNodes[0].parentNode !== parentEl
+  ) {
+    insertBeforeWithAnchoredNodes(
+      parentEl, nAnchor.anchoredNodes, nAnchor.nextSibling);
+  }
 
   // indexMap maps array values (both from newArray and lastArray) to index
   // metadata objects: if the value is present in lastArray, meta.iLast is its
@@ -538,7 +554,11 @@ function mapAnchorBindingUpdate() {
   if (self.lastNodes.length) {
     // Find rightmost non-empty array lastNode index.
     i = self.lastNodes.length - 1;
-    while (Array.isArray(self.lastNodes[i]) && !self.lastNodes[i].length) { i-- }
+
+    while (i > 0 && (!self.lastNodes[i] || (
+      Array.isArray(self.lastNodes[i]) && !self.lastNodes[i].length
+    ))) { i-- }
+
     tail = self.lastNodes[i];
 
     // If it's an array, get the last node inside of it.
@@ -573,9 +593,7 @@ function mapAnchorBindingUpdate() {
       // previously replaced by another node taking its position. Doing this
       // instead of actually removing items preserves indices, which makes
       // everything much simpler.
-      if (updatedNodes[meta.iLast] === n) {
-        updatedNodes[meta.iLast] = null;
-      }
+      if (updatedNodes[meta.iLast] === n) { updatedNodes[meta.iLast] = null }
 
       return;
     }
@@ -592,11 +610,12 @@ function mapAnchorBindingUpdate() {
     nFirst = Array.isArray(n) ? n[0] : n;
 
     // Find nextSibling for this node by scanning updatedNodes from meta.iNew
-    // (updatedNodes can be null while items are moved around to match their new
-    // positions; others can be empty arrays, so we skip those too).
+    // (updatedNodes can be null while items are moved around to match their
+    // new positions; others can be empty arrays, so we skip those too).
     for (i = meta.iNew; i < updatedNodes.length; i++) {
-      nextSibling = updatedNodes[i];
-      if (nextSibling && (!Array.isArray(nextSibling) || nextSibling.length)) { break }
+      if ((nextSibling = updatedNodes[i]) && (
+        !Array.isArray(nextSibling) || nextSibling.length
+      )) { break }
     }
 
     if (nextSibling) {
@@ -637,10 +656,7 @@ function mapAnchorBindingUpdate() {
     // it's already been replaced by another node taking its position. Doing
     // this instead of actually removing items preserves indices, which makes
     // everything much simpler.
-    if (updatedNodes[meta.iLast] === n) {
-      updatedNodes[meta.iLast] = null;
-    }
-
+    if (updatedNodes[meta.iLast] === n) { updatedNodes[meta.iLast] = null }
     updatedNodes[meta.iNew] = n;
   });
 
@@ -769,8 +785,7 @@ function processMutations(muts, observer, di) {
       b = n.bindings[i];
 
       if (onDetachRegExp.test(b.key)) {
-        try { b.handler(n) }
-        catch (e) { di.console.error(e) }
+        try { b.handler(n) } catch (e) { di.console.error(e) }
         break;
       }
     }
@@ -786,8 +801,7 @@ function processMutations(muts, observer, di) {
       b = n.bindings[i];
 
       if (onAttachRegExp.test(b.key)) {
-        try { b.handler(n) }
-        catch (e) { di.console.error(e) }
+        try { b.handler(n) } catch (e) { di.console.error(e) }
         break;
       }
     }
@@ -829,8 +843,7 @@ function update() {
     update.frame = null;
 
     for (i = 0; i < update.promiseCallbacks.length; i++) {
-      try { update.promiseCallbacks[i]() }
-      catch (e) { console.error(e) }
+      try { update.promiseCallbacks[i]() } catch (e) { console.error(e) }
     }
 
     update.promiseCallbacks.length = 0;
@@ -851,8 +864,7 @@ function updateSync(di) {
   var i;
 
   for (i = 0; i < di.evListeners.beforeUpdate.length; i++) {
-    try { di.evListeners.beforeUpdate[i]() }
-    catch (e) { di.console.error(e) }
+    try { di.evListeners.beforeUpdate[i]() } catch (e) { di.console.error(e) }
   }
 
   for (i = 0; i < di.boundNodes.length; i++) {
@@ -860,8 +872,7 @@ function updateSync(di) {
   }
 
   for (i = 0; i < di.evListeners.update.length; i++) {
-    try { di.evListeners.update[i]() }
-    catch (e) { di.console.error(e) }
+    try { di.evListeners.update[i]() } catch (e) { di.console.error(e) }
   }
 }
 
@@ -903,20 +914,19 @@ function handleBindingError(e, binding, di) {
     bindings: [],
   };
 
-  eEntry.count++;
-  if (eEntry.bindings.indexOf(binding) === -1) { eEntry.bindings.push(binding) }
+  if (eEntry.bindings.indexOf(binding) === -1) {
+    eEntry.bindings.push(binding);
+  }
 
   binding.error = eEntry;
 
-  if (eEntry.count === 1) {
+  if (++eEntry.count === 1) {
     di.console.error(e);
     di.console.error('in', binding);
   }
 }
 
-function clearError(e) {
-  delete errors[e.toString()];
-}
+function clearError(e) { delete errors[e.toString()] }
 
 var evListeners = { beforeUpdate: [], update: [] };
 
