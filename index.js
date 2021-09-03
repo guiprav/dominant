@@ -48,7 +48,7 @@ function removeWithAnchoredNodes(n) {
     }
   }
 
-  n.parentNode.removeChild(n);
+  n.parentNode && n.parentNode.removeChild(n);
 }
 
 // Some nodes have n.anchoredNodes. When moving n, it's important to also
