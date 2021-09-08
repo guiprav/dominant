@@ -491,7 +491,7 @@ Cursor.prototype.valueOf = function() { return this.index };
 
 function mapAnchorBindingUpdate() {
   var self = this, i, j, n, meta, nFirst, nSep;
-  var nAnchor = self.target, nCursor = nAnchor, parentEl = nAnchor.parentNode, updatedNodes;
+  var nAnchor = self.target, nCursor = nAnchor, nTail, parentEl = nAnchor.parentNode, updatedNodes;
   var newArray = [].slice.call(self.get() || []), dirty = false;
 
   // Initialize to empty arrays/maps if this is the first execution.
@@ -517,8 +517,9 @@ function mapAnchorBindingUpdate() {
   if (!dirty) { return }
 
   self.lastNodes.forEach(function(n) { removeWithAnchoredNodes(n) });
+  nTail = nAnchor.nextSibling;
 
-  updatedNodes = newArray.map(function(x, i) {
+  newArray.forEach(function(x, i) {
     meta = self.valueMap.get(x) || {};
     objAssign(meta.cursor = meta.cursor || new Cursor(), { index: i });
     n = meta.n;
@@ -539,6 +540,12 @@ function mapAnchorBindingUpdate() {
     self.valueMap.set(x, meta);
     return meta.n;
   });
+
+  updatedNodes = [];
+
+  for (nCursor = nAnchor.nextSibling; nCursor !== nTail; nCursor = nCursor.nextSibling) {
+    updatedNodes.push(nCursor);
+  }
 
   // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
