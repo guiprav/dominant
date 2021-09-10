@@ -490,15 +490,14 @@ Cursor.prototype.toString = function() { return String(this.index) };
 Cursor.prototype.valueOf = function() { return this.index };
 
 function mapAnchorBindingUpdate() {
-  var self = this, i, j, metaNew, metaLast, n, nFirst, nSep, xNew, xLast;
-  var nAnchor = self.target, parentEl = nAnchor.parentNode;
-  var nextSibling, tail, updatedNodes;
-  var newArray = [].slice.call(self.get() || []);
+  var self = this, i, j, n, meta, nFirst, nSep;
+  var nAnchor = self.target, nCursor = nAnchor, parentEl = nAnchor.parentNode, updatedNodes;
+  var newArray = [].slice.call(self.get() || []), dirty = false;
 
   // Initialize to empty arrays/maps if this is the first execution.
   self.lastArray = self.lastArray || [];
   self.lastNodes = self.lastNodes || [];
-  self.cursorMap = self.cursorMap || new Map();
+  self.valueMap = self.valueMap || new Map();
 
   // Ensure anchoredNodes (if any) are really anchored to parentEl.
   // Other binding updates may have ejected them.
@@ -511,157 +510,35 @@ function mapAnchorBindingUpdate() {
       parentEl, nAnchor.anchoredNodes, nAnchor.nextSibling);
   }
 
-  // indexMap maps array values (both from newArray and lastArray) to index
-  // metadata objects: if the value is present in lastArray, meta.iLast is its
-  // index there. If the value is present in newArray, meta.iNew is its index
-  // there.
-  var indexMap = new Map();
-
-  // Iterate from 0 to lastArray.length or newArray.length, whichever is
-  // greater.
   for (i = 0; i < Math.max(self.lastArray.length, newArray.length); i++) {
-    // Get lastArray/newArray values for the current index.
-    xLast = self.lastArray[i];
-    xNew = newArray[i];
-
-    // If the lastArray[i] === newArray[i], then this is an existing value
-    // that was not reordered, so we skip them.
-    if (xLast === xNew) { continue }
-
-    // If i is within lastArray bounds, store meta.iLast for this value.
-    if (i < self.lastArray.length) {
-      metaLast = objAssign({}, indexMap.get(xLast) || {});
-      indexMap.set(xLast, objAssign(metaLast, { iLast: i }));
-    }
-
-    // If i is within newArray bounds, store meta.iNew for this value.
-    if (i < newArray.length) {
-      metaNew = objAssign({}, indexMap.get(xNew) || {});
-      indexMap.set(xNew, objAssign(metaNew, { iNew: i }));
-
-      // Update cursor index.
-      self.cursorMap.set(xNew, objAssign(
-        self.cursorMap.get(xNew) || new Cursor(), { index: i },
-      ));
-    }
+    if (self.lastArray[i] !== newArray[i]) { dirty = true; break }
   }
 
-  // tail is a reference to the last existing node's nextSibling (which may be
-  // null, in which case inserting before it will have the effect of appending
-  // elements to the end of parentEl). It won't be null if d.map is followed by
-  // other nodes inside parentEl, so inserting before them has the effect of
-  // inserting nodes after all mapped nodes, but before any next siblings.
-  if (self.lastNodes.length) {
-    // Find rightmost non-empty array lastNode index.
-    i = self.lastNodes.length - 1;
+  if (!dirty) { return }
 
-    while (i > 0 && (!self.lastNodes[i] || (
-      Array.isArray(self.lastNodes[i]) && !self.lastNodes[i].length
-    ))) { i-- }
+  self.lastNodes.forEach(function(n) { removeWithAnchoredNodes(n) });
 
-    tail = self.lastNodes[i];
+  updatedNodes = newArray.map(function(x, i) {
+    meta = self.valueMap.get(x) || {};
+    objAssign(meta.cursor = meta.cursor || new Cursor(), { index: i });
+    n = meta.n;
 
-    // If it's an array, get the last node inside of it.
-    if (Array.isArray(tail)) { tail = tail[tail.length - 1] }
-
-    // If we arrived at a node with anchoredNodes, get the latest anchoredNode.
-    while (tail && tail.anchoredNodes && tail.anchoredNodes.length) {
-      tail = tail.anchoredNodes[tail.anchoredNodes.length - 1];
-    }
-  }
-
-  // If we couldn't find any actual DOM node in lastNodes, use the nAnchor
-  // instead. Also the tail position we're interested in is right after the node
-  // currently in tail position, so we take its nextSibling for tail.
-  tail = (tail || nAnchor).nextSibling;
-
-  // We start by making a shallow copy of lastNodes so we can make changes to
-  // the copy without touching lastNodes itself (in case of errors, checking
-  // lastNodes could help debugging).
-  updatedNodes = [].slice.call(self.lastNodes);
-
-  // For each value that changed position...
-  indexMap.forEach(function(meta, x) {
-    n = self.lastNodes[meta.iLast];
-
-    // Remove all nodes associated with removed values.
-    if (meta.iNew === undefined) {
-      self.cursorMap.delete(x);
-      arrayify(n).forEach(removeWithAnchoredNodes);
-
-      // Replace it with a null value in updatedNodes, unless it's been
-      // previously replaced by another node taking its position. Doing this
-      // instead of actually removing items preserves indices, which makes
-      // everything much simpler.
-      if (updatedNodes[meta.iLast] === n) { updatedNodes[meta.iLast] = null }
-
-      return;
-    }
-
-    // If we haven't created a node for this value yet, we do so here.
     if (!n) {
-      n = self.map(x, self.cursorMap.get(x));
+      n = meta.n = self.map(x, meta.cursor);
 
-      n = !Array.isArray(n)
+      n = meta.n = !Array.isArray(n)
         ? appendableNode(n)
         : n.map(appendableNode).filter(Boolean);
     }
 
-    nFirst = Array.isArray(n) ? n[0] : n;
-
-    // Find nextSibling for this node by scanning updatedNodes from meta.iNew
-    // (updatedNodes can be null while items are moved around to match their
-    // new positions; others can be empty arrays, so we skip those too).
-    for (i = meta.iNew; i < updatedNodes.length; i++) {
-      if ((nextSibling = updatedNodes[i]) && (
-        !Array.isArray(nextSibling) || nextSibling.length
-      )) { break }
-    }
-
-    if (nextSibling) {
-      // If nextSibling is an array, we pick the first node in it.
-      if (Array.isArray(nextSibling)) { nextSibling = nextSibling[0] }
-    } else {
-      // If no nextSibling could be found in updatedNodes, we use tail.
-      nextSibling = tail;
-    }
-
-    // If the value is not new (meta.iLast !== undefined), but nextSibling is n
-    // itself or its current nextSibling, it means n has fallen into place in
-    // the DOM as a consequence of other node changes, so we only need to update
-    // updatedNodes.
-    if (meta.iLast !== undefined && (
-      nextSibling === nFirst || nextSibling === nFirst.nextSibling
-    )) {
-      // Replace what's in meta.iLast with a null value in updatedNodes, unless
-      // it's already been replaced by another node taking its position. Doing
-      // this instead of actually removing items preserves indices, which makes
-      // everything much simpler.
-      if (updatedNodes[meta.iLast] === n) {
-        updatedNodes[meta.iLast] = null;
-      }
-
-      updatedNodes[meta.iNew] = n;
-      return;
-    }
-
-    // Lastly, if we're still here, it means all that's left to do is to
-    // actually move nodes before their nextSibling...
     arrayify(n).forEach(function(n) {
-      insertBeforeWithAnchoredNodes(parentEl, n, nextSibling);
+      insertBeforeWithAnchoredNodes(parentEl, n, nCursor.nextSibling);
+      nCursor = n;
     });
 
-    // And update updatedNodes.
-    // Replace what's in meta.iLast with a null value in updatedNodes, unless
-    // it's already been replaced by another node taking its position. Doing
-    // this instead of actually removing items preserves indices, which makes
-    // everything much simpler.
-    if (updatedNodes[meta.iLast] === n) { updatedNodes[meta.iLast] = null }
-    updatedNodes[meta.iNew] = n;
+    self.valueMap.set(x, meta);
+    return meta.n;
   });
-
-  // Truncate updatedNodes to new length.
-  updatedNodes.length = newArray.length;
 
   // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
