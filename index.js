@@ -1,8 +1,10 @@
 'use strict';
 
 var boundNodes = [];
+var ieNodes = navigator.userAgent.indexOf('Trident') ? [] : null;
 
 var classTypeRegExp = /^class\s/;
+var ariaRegExp = /^aria-/;
 var svgNsRegExp = /\/svg$/;
 var wsRegExp = / |\r|\n/;
 var onAttachRegExp = /^on:?attach$/i
@@ -86,8 +88,8 @@ Binding.prototype.update = function() {
 
   var el = this.target;
 
-  // SVG element props need to be managed as attributes.
-  if (svgNsRegExp.test(el.namespaceURI)) {
+  // aria-* and SVG element props need to be managed as attributes.
+  if (ariaRegExp.test(this.key) || svgNsRegExp.test(el.namespaceURI)) {
     if (!nullish(newValue)) { el.setAttribute(this.key, newValue) }
     else { el.removeAttribute(this.key) }
   } else {
@@ -274,10 +276,14 @@ function createElement(type) {
     return type(props);
   }
 
-  // Otherwise element type is a string representing a tag name, which we create.
-  el = type.indexOf('svg:') !== 0
-    ? document.createElement(type)
-    : document.createElementNS('http://www.w3.org/2000/svg', type.split(':')[1]);
+  // If type is an existing element, use it.
+  if (type instanceof Node) { el = type }
+  else {
+    // Otherwise element type is a string representing a tag name, which we create.
+    el = type.indexOf('svg:') !== 0
+      ? document.createElement(type)
+      : document.createElementNS('http://www.w3.org/2000/svg', type.split(':')[1]);
+  }
 
   // For each prop...
   for (k in props) {
@@ -378,8 +384,8 @@ function createElement(type) {
       continue;
     }
 
-    // SVG element props need to be managed as attributes.
-    if (svgNsRegExp.test(el.namespaceURI)) {
+    // aria-* and SVG element props need to be managed as attributes.
+    if (ariaRegExp.test(k) || svgNsRegExp.test(el.namespaceURI)) {
       if (!nullish(v)) { el.setAttribute(k, v) }
       else { el.removeAttribute(k) }
     }
@@ -405,6 +411,7 @@ function createComment(text) {
 function createBoundComment(text, bindingProps) {
   var c = createComment(text);
   c.bindings = [new Binding(objAssign(bindingProps, { target: c }))];
+  ieNodes && ieNodes.push(c);
   return c;
 }
 
@@ -516,10 +523,10 @@ function mapAnchorBindingUpdate() {
 
   if (!dirty) { return }
 
-  self.lastNodes.forEach(function(n) { removeWithAnchoredNodes(n) });
+  (nAnchor.anchoredNodes || []).forEach(function(n) { removeWithAnchoredNodes(n) });
   nTail = nAnchor.nextSibling;
 
-  newArray.forEach(function(x, i) {
+  updatedNodes = newArray.map(function(x, i) {
     meta = self.valueMap.get(x) || {};
     objAssign(meta.cursor = meta.cursor || new Cursor(), { index: i });
     n = meta.n;
@@ -532,20 +539,10 @@ function mapAnchorBindingUpdate() {
         : n.map(appendableNode).filter(Boolean);
     }
 
-    arrayify(n).forEach(function(n) {
-      insertBeforeWithAnchoredNodes(parentEl, n, nCursor.nextSibling);
-      nCursor = n;
-    });
-
+    insertBeforeWithAnchoredNodes(parentEl, n, nTail);
     self.valueMap.set(x, meta);
-    return meta.n;
+    return n;
   });
-
-  updatedNodes = [];
-
-  for (nCursor = nAnchor.nextSibling; nCursor !== nTail; nCursor = nCursor.nextSibling) {
-    updatedNodes.push(nCursor);
-  }
 
   // Remember updated array values and its associated nodes.
   self.lastArray = newArray;
@@ -595,6 +592,7 @@ function createTextNode(getFn) {
     target: n,
   })];
 
+  ieNodes && ieNodes.push(n);
   return n;
 }
 
@@ -633,7 +631,7 @@ function forEachNodeWithBindings(ns, cb) {
 function processMutations(muts, observer, di) {
   di = di || {};
   di.boundNodes = di.boundNodes || boundNodes;
-  di.updateNode = di.updateNode || updateNode;
+  di.updateSync = di.updateSync || updateSync;
   di.console = di.console || console;
 
   var i, j, mut, n, b;
@@ -689,9 +687,9 @@ function processMutations(muts, observer, di) {
         break;
       }
     }
-
-    di.updateNode(n, di);
   });
+
+  di.updateSync();
 }
 
 var observer = typeof MutationObserver !== 'undefined' &&
@@ -701,7 +699,7 @@ observer && observer.observe(document, { childList: true, subtree: true });
 
 function childMacro(fn) {
   try {
-    let ret = fn();
+    var ret = fn();
 
     if (nullish(ret) || ret instanceof Node || Array.isArray(ret)) {
       return ret;
@@ -767,7 +765,7 @@ function updateNode(n, di) {
 
   // n.parentNode is a workaround for IE11's Node#contains not working on
   // non-Element nodes.
-  if (!document.body.contains(n.parentNode)) { return }
+  if (!document.body || !document.body.contains(n.parentNode)) { return }
 
   for (i = 0; i < n.bindings.length; i++) {
     b = n.bindings[i];
@@ -838,6 +836,7 @@ objAssign(exports, {
 
   processMutations: processMutations,
   boundNodes: boundNodes,
+  ieNodes: ieNodes,
 
   on: addEventListener,
   off: removeEventListener,
