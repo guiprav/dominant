@@ -13,18 +13,18 @@ var onDetachRegExp = /^on:?detach$/i
 function nullish(x) { return x === undefined || x === null }
 
 // Possible class values:
-// nullish, numbers;
+// nullish,
 // single-class strings (e.g. 'foo');
 // multi-class strings (whitespace separated, e.g. 'foo  bar\n baz');
 // (nested) arrays of any of the above.
 // This function normalizes all possibilities to arrays of single-class strings.
-// Note that booleans are always filtered out (so we can use short-circuit
-// operators without accidentally adding classes like 'true' or 'false').
+// Note that numbers and booleans are always filtered out (so we can use short-circuit
+// operators without accidentally adding classes like 'true' or '1').
 function normalizeClasses(x) {
   if (!Array.isArray(x)) { x = [x] }
 
   return flatMap(x, function(y) {
-    return (y || typeof y === 'number') && String(y).split(wsRegExp);
+    return (y && typeof y !== 'boolean' && typeof y !== 'number') && String(y).split(wsRegExp);
   }).filter(Boolean);
 }
 
