@@ -427,7 +427,7 @@ function createIfAnchor(predFn, thenNodes, elseNodes) {
 function ifAnchorBindingUpdate() {
   var i, n;
   var nAnchor = this.target, parentEl = nAnchor.parentNode;
-  var newValue = Boolean(this.get()), nNew, nCursor;
+  var newValue = Boolean(this.get()), nNew, nTail;
 
   if (newValue === this.lastValue) {
     // Ensure anchoredNodes (if any) are really anchored to parentEl.
@@ -460,17 +460,15 @@ function ifAnchorBindingUpdate() {
 
   // Append new nodes (if any) after anchor and store them as anchored nodes.
   if (nNew) {
-    nCursor = nAnchor;
+    nTail = nAnchor.nextSibling;
     nNew = Array.isArray(nNew) ? nNew : [nNew];
 
     for (i = 0; i < nNew.length; i++) {
       n = appendableNode(nNew[i]);
       if (!n) { continue }
 
-      insertBeforeWithAnchoredNodes(parentEl, n, nCursor.nextSibling);
+      insertBeforeWithAnchoredNodes(parentEl, n, nTail);
       nAnchor.anchoredNodes.push(n);
-
-      nCursor = n;
     }
   }
 
@@ -498,7 +496,7 @@ Cursor.prototype.valueOf = function() { return this.index };
 
 function mapAnchorBindingUpdate() {
   var self = this, i, j, n, meta, nFirst, nSep;
-  var nAnchor = self.target, nCursor = nAnchor, nTail, parentEl = nAnchor.parentNode, updatedNodes;
+  var nAnchor = self.target, nTail, parentEl = nAnchor.parentNode, updatedNodes;
   var newArray = [].slice.call(self.get() || []), dirty = false;
 
   // Initialize to empty arrays/maps if this is the first execution.
