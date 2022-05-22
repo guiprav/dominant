@@ -523,6 +523,7 @@ function mapAnchorBindingUpdate() {
 
   (nAnchor.anchoredNodes || []).forEach(function(n) { removeWithAnchoredNodes(n) });
   nTail = nAnchor.nextSibling;
+  self.valueMap = new Map();
 
   updatedNodes = newArray.map(function(x, i) {
     meta = self.valueMap.get(x) || {};
