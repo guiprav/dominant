@@ -610,6 +610,30 @@ function textNodeBindingUpdate() {
   this.lastValue = this.target.textContent = newValue;
 }
 
+function createPortalNode(getFn) {
+  return createBoundComment('portal anchor', {
+    get: getFn,
+    update: portalAnchorBindingUpdate,
+  });
+}
+
+function portalAnchorBindingUpdate() {
+  var newValue = this.get();
+
+  // If the value hasn't changed, do nothing.
+  if (newValue === this.lastValue) { return }
+
+  // Remove old node.
+  this.lastValue && this.lastValue.remove();
+
+  // Insert new one.
+  newValue &&
+    this.target.parentNode.insertBefore(newValue, this.target.nextSibling);
+
+  // Remember updated value.
+  this.lastValue = newValue;
+}
+
 function fromContext(n, k) {
   while (n) {
     if (n.context && n.context[k]) { return n.context[k] }
@@ -830,6 +854,7 @@ objAssign(exports, {
   if: createIfAnchor,
   map: createMapAnchor,
   text: createTextNode,
+  portal: createPortalNode,
 
   fromContext: fromContext,
 
